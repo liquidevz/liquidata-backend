@@ -27,7 +27,7 @@ const contactFormSchema = new mongoose.Schema({
     value: String,
     label: String
   }],
-  submitUrl: { type: String, default: 'https://form.thetaphaus.in/send-email' },
+  submitUrl: { type: String, default: '/api/contact-submissions' },
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
@@ -87,7 +87,7 @@ async function seedData() {
         { value: "20l-40l", label: "₹20,00,000 - ₹40,00,000" },
         { value: "40l+", label: "₹40,00,000+" }
       ],
-      submitUrl: 'https://form.thetaphaus.in/send-email',
+      submitUrl: '/api/contact-submissions',
       isActive: true
     });
 

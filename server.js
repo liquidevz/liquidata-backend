@@ -554,7 +554,7 @@ const contactFormSchema = new mongoose.Schema({
     value: String,
     label: String
   }],
-  submitUrl: { type: String, default: 'https://form.thetaphaus.in/send-email' },
+  submitUrl: { type: String, default: '/api/contact-submissions' },
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
