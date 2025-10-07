@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/liquidata');
+mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://myliquidata:myliquidata@liquidata-backend.pje93kc.mongodb.net/?retryWrites=true&w=majority&appName=liquidata-backend');
 
 const calculatorSchema = new mongoose.Schema({
   title: { type: String, default: 'Smart Calculator' },

@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const seedLogos = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/liquidata');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://myliquidata:myliquidata@liquidata-backend.pje93kc.mongodb.net/?retryWrites=true&w=majority&appName=liquidata-backend');
     
     // Clear existing logos
     await LogoSection.deleteMany({});

@@ -15,7 +15,7 @@ const AdminUser = mongoose.model('AdminUser', adminUserSchema);
 
 async function resetAdmin() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/liquidata');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://myliquidata:myliquidata@liquidata-backend.pje93kc.mongodb.net/?retryWrites=true&w=majority&appName=liquidata-backend');
     console.log('Connected to MongoDB');
 
     // Delete existing admin
