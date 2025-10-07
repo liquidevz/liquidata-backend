@@ -202,7 +202,7 @@ If you encounter issues:
 
 1. Check the logs: `docker-compose logs -f`
 2. Verify environment variables: `docker-compose config`
-3. Test health endpoint: `curl http://localhost:5001/health`
+3. Test health endpoint: `curl https://liquidata.rangaone.finance/health`
 4. Check system resources: `htop` or `docker stats`
 
 ## 🔄 Auto-restart
