@@ -1,0 +1,31 @@
+services:
+  liquidata-backend:
+    build: .
+    container_name: liquidata-backend
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - NODE_ENV=production
+      - PORT=5001
+    env_file:
+      - .env.production
+    volumes:
+      - ./public/uploads:/app/public/uploads
+      - ./logs:/app/logs
+    networks:
+      - liquidata-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  liquidata-network:
+    driver: bridge
+
+volumes:
+  uploads:
+  logs:
