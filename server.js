@@ -488,6 +488,50 @@ const swaggerSpec = {
         }
       }
     },
+    '/api/admin/calculator': {
+      put: {
+        summary: 'Update calculator configuration',
+        tags: ['Calculator'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                  currency: { type: 'string' },
+                  basePrice: { type: 'number' },
+                  steps: { type: 'array' },
+                  pricingRules: { type: 'object' },
+                  pricingConfig: { type: 'object' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Calculator updated successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    calculator: { $ref: '#/components/schemas/Calculator' }
+                  }
+                }
+              }
+            }
+          },
+          401: { description: 'Unauthorized' },
+          500: { description: 'Failed to update calculator' }
+        }
+      }
+    },
     '/api/calculator/calculate': {
       post: {
         summary: 'Calculate project price with Indian pricing (INR)',
@@ -760,6 +804,62 @@ const swaggerSpec = {
         },
         responses: {
           201: { description: 'Submission created successfully' }
+        }
+      }
+    },
+    '/api/calculator-submissions': {
+      get: {
+        summary: 'Get all calculator submissions (Admin only)',
+        tags: ['Calculator Submissions'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'List of calculator submissions' }
+        }
+      },
+      post: {
+        summary: 'Create calculator submission (Public)',
+        tags: ['Calculator Submissions'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['selections', 'result'],
+                properties: {
+                  selections: { type: 'object' },
+                  result: { type: 'object' },
+                  contactInfo: { type: 'object' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'Calculator submission created' }
+        }
+      }
+    },
+    '/api/admin/seed-calculator': {
+      post: {
+        summary: 'Seed calculator configuration (Admin only)',
+        tags: ['Calculator'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Calculator seeded successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    stepCount: { type: 'number' }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -2246,6 +2346,31 @@ app.delete('/api/calculator-submissions/:id', authenticateAdmin, async (req, res
     res.json({ message: 'Calculator submission deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete calculator submission' });
+  }
+});
+
+// Admin only - seed calculator configuration
+app.post('/api/admin/seed-calculator', authenticateAdmin, async (req, res) => {
+  try {
+    const { autoSeedCalculator } = require('./auto-seed-calculator');
+    const seeded = await autoSeedCalculator(Calculator);
+    
+    if (seeded) {
+      const calculator = await Calculator.findOne({ isActive: true });
+      res.json({ 
+        message: 'Calculator seeded successfully!',
+        stepCount: calculator.steps.length
+      });
+    } else {
+      const calculator = await Calculator.findOne({ isActive: true });
+      res.json({ 
+        message: 'Calculator already exists',
+        stepCount: calculator.steps.length
+      });
+    }
+  } catch (error) {
+    console.error('Seed calculator error:', error);
+    res.status(500).json({ error: 'Failed to seed calculator' });
   }
 });
 
