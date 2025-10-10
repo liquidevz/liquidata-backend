@@ -127,6 +127,77 @@ const swaggerSpec = {
     }
   },
   paths: {
+    '/api/admin/setup/check': {
+      get: {
+        summary: 'Check if admin setup is needed',
+        tags: ['Admin Setup'],
+        responses: {
+          200: {
+            description: 'Admin setup status',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    hasAdmin: { type: 'boolean' },
+                    adminCount: { type: 'number' },
+                    needsSetup: { type: 'boolean' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/setup/first': {
+      post: {
+        summary: 'First-time admin setup (no auth required)',
+        tags: ['Admin Setup'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['username', 'email', 'password'],
+                properties: {
+                  username: { type: 'string', example: 'admin' },
+                  email: { type: 'string', format: 'email', example: 'admin@liquidata.com' },
+                  password: { type: 'string', minLength: 8, example: 'SecurePassword123' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'First admin created successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    token: { type: 'string' },
+                    admin: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string' },
+                        username: { type: 'string' },
+                        email: { type: 'string' },
+                        role: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          400: { description: 'Admin already exists or validation error' }
+        }
+      }
+    },
     '/api/admin/login': {
       post: {
         summary: 'Admin login',
@@ -170,6 +241,227 @@ const swaggerSpec = {
             }
           },
           401: { description: 'Invalid credentials' }
+        }
+      }
+    },
+    '/api/admin/me': {
+      get: {
+        summary: 'Get current admin profile',
+        tags: ['Admin Profile'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Current admin profile',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    _id: { type: 'string' },
+                    username: { type: 'string' },
+                    email: { type: 'string' },
+                    role: { type: 'string' },
+                    isActive: { type: 'boolean' },
+                    createdAt: { type: 'string' },
+                    updatedAt: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/users': {
+      get: {
+        summary: 'Get all admin users (Super Admin only)',
+        tags: ['Admin Management'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'List of admin users',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    admins: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          _id: { type: 'string' },
+                          username: { type: 'string' },
+                          email: { type: 'string' },
+                          role: { type: 'string' },
+                          isActive: { type: 'boolean' },
+                          createdAt: { type: 'string' }
+                        }
+                      }
+                    },
+                    total: { type: 'number' }
+                  }
+                }
+              }
+            }
+          },
+          403: { description: 'Forbidden - Super Admin only' }
+        }
+      },
+      post: {
+        summary: 'Create new admin user (Super Admin only)',
+        tags: ['Admin Management'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['username', 'email', 'password'],
+                properties: {
+                  username: { type: 'string', example: 'newadmin' },
+                  email: { type: 'string', format: 'email', example: 'newadmin@liquidata.com' },
+                  password: { type: 'string', minLength: 8, example: 'SecurePass123' },
+                  role: { type: 'string', enum: ['admin', 'super_admin'], default: 'admin' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'Admin user created successfully' },
+          400: { description: 'Validation error or duplicate user' },
+          403: { description: 'Forbidden - Super Admin only' }
+        }
+      }
+    },
+    '/api/admin/users/{id}': {
+      get: {
+        summary: 'Get admin user by ID',
+        tags: ['Admin Management'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' }
+          }
+        ],
+        responses: {
+          200: { description: 'Admin user details' },
+          403: { description: 'Forbidden' },
+          404: { description: 'Admin not found' }
+        }
+      },
+      put: {
+        summary: 'Update admin user',
+        tags: ['Admin Management'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' }
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  username: { type: 'string' },
+                  email: { type: 'string', format: 'email' },
+                  role: { type: 'string', enum: ['admin', 'super_admin'] },
+                  isActive: { type: 'boolean' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Admin user updated successfully' },
+          403: { description: 'Forbidden' },
+          404: { description: 'Admin not found' }
+        }
+      },
+      delete: {
+        summary: 'Delete admin user (Super Admin only)',
+        tags: ['Admin Management'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' }
+          }
+        ],
+        responses: {
+          200: { description: 'Admin user deleted successfully' },
+          400: { description: 'Cannot delete own account' },
+          403: { description: 'Forbidden - Super Admin only' },
+          404: { description: 'Admin not found' }
+        }
+      }
+    },
+    '/api/admin/users/{id}/password': {
+      put: {
+        summary: 'Change admin password',
+        tags: ['Admin Management'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' }
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['newPassword'],
+                properties: {
+                  currentPassword: { type: 'string', description: 'Required when changing own password' },
+                  newPassword: { type: 'string', minLength: 8 }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Password changed successfully' },
+          401: { description: 'Current password incorrect' },
+          403: { description: 'Forbidden' }
+        }
+      }
+    },
+    '/api/admin/users/{id}/toggle-active': {
+      patch: {
+        summary: 'Toggle admin active status (Super Admin only)',
+        tags: ['Admin Management'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' }
+          }
+        ],
+        responses: {
+          200: { description: 'Admin status toggled successfully' },
+          400: { description: 'Cannot deactivate own account' },
+          403: { description: 'Forbidden - Super Admin only' },
+          404: { description: 'Admin not found' }
         }
       }
     },
@@ -468,6 +760,369 @@ const swaggerSpec = {
 };
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Root route - API landing page
+app.get('/', (req, res) => {
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquidata API - Backend Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            text-align: center;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 50px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .icon {
+            width: 24px;
+            height: 24px;
+        }
+        
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        
+        .card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+        }
+        
+        .card h3 {
+            color: #667eea;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .card p {
+            color: #64748b;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        .endpoint-list {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+        
+        .endpoint {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .endpoint:last-child {
+            border-bottom: none;
+        }
+        
+        .method {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .method.get { background: #dbeafe; color: #1e40af; }
+        .method.post { background: #dcfce7; color: #166534; }
+        .method.put { background: #fef3c7; color: #92400e; }
+        .method.delete { background: #fee2e2; color: #991b1b; }
+        .method.patch { background: #e0e7ff; color: #3730a3; }
+        
+        .endpoint-path {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            color: #334155;
+            font-size: 0.9rem;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            color: white;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Liquidata API</h1>
+            <p>Backend Server & REST API</p>
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                <span>Server Running</span>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2>
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    Quick Links
+                </h2>
+                <div class="card-grid">
+                    <a href="/api-docs" class="card">
+                        <h3>📚 API Documentation</h3>
+                        <p>Interactive Swagger UI with all endpoints, request/response examples, and testing tools</p>
+                    </a>
+                    <a href="/health" class="card">
+                        <h3>❤️ Health Check</h3>
+                        <p>Check server status and uptime. Returns JSON with current timestamp</p>
+                    </a>
+                    <a href="/api/admin/setup/check" class="card">
+                        <h3>🔐 Admin Setup</h3>
+                        <p>Check if admin setup is needed. Use for first-time configuration</p>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    API Statistics
+                </h2>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">12+</div>
+                        <div class="stat-label">Endpoints</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">v2.0</div>
+                        <div class="stat-label">API Version</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">JWT</div>
+                        <div class="stat-label">Auth Method</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">REST</div>
+                        <div class="stat-label">API Type</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                    </svg>
+                    Main Endpoints
+                </h2>
+                <div class="endpoint-list">
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/health</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/api-docs</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/admin/login</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/admin/setup/first</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/api/admin/users</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/contact-submissions</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/api/calculator-submissions</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/api/calculator</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                    Documentation
+                </h2>
+                <p style="color: #64748b; margin-bottom: 15px;">
+                    For detailed API documentation, authentication guides, and code examples, visit:
+                </p>
+                <a href="/api-docs" class="btn">View Full Documentation →</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Liquidata Backend API • Built with Express.js & MongoDB</p>
+            <p style="margin-top: 10px; font-size: 0.85rem;">
+                Port: ${PORT} • Environment: ${process.env.NODE_ENV || 'development'}
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+  
+  res.send(html);
+});
 
 mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://myliquidata:myliquidata@liquidata-backend.pje93kc.mongodb.net/?retryWrites=true&w=majority&appName=liquidata-backend')
   .then(() => console.log('MongoDB connected successfully.'))
@@ -832,7 +1487,74 @@ const calculateProjectPrice = (calculator, selections) => {
   };
 };
 
-// ============= ADMIN AUTHENTICATION APIs =============
+// ============= ADMIN AUTHENTICATION & MANAGEMENT APIs =============
+
+// Check if any admin exists (for first-time setup)
+app.get('/api/admin/setup/check', async (req, res) => {
+  try {
+    const adminCount = await AdminUser.countDocuments();
+    res.json({ 
+      hasAdmin: adminCount > 0,
+      adminCount: adminCount,
+      needsSetup: adminCount === 0
+    });
+  } catch (error) {
+    console.error('Admin check error:', error);
+    res.status(500).json({ error: 'Failed to check admin status' });
+  }
+});
+
+// First-time admin setup (no authentication required, only if no admins exist)
+app.post('/api/admin/setup/first', async (req, res) => {
+  try {
+    // Check if any admin exists
+    const existingAdmin = await AdminUser.findOne();
+    
+    if (existingAdmin) {
+      return res.status(400).json({ error: 'Admin already exists. Use login instead.' });
+    }
+
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: 'Username, email, and password are required' });
+    }
+
+    // Password strength validation
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const admin = await AdminUser.create({
+      username,
+      email,
+      password: hashedPassword,
+      role: 'super_admin',
+      isActive: true
+    });
+
+    const token = jwt.sign(
+      { id: admin._id, username: admin.username, role: admin.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({
+      message: 'First admin created successfully',
+      token,
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role
+      }
+    });
+  } catch (error) {
+    console.error('First admin setup error:', error);
+    res.status(500).json({ error: 'Failed to setup first admin' });
+  }
+});
 
 // Admin Login
 app.post('/api/admin/login', async (req, res) => {
@@ -878,8 +1600,50 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
+// Get All Admins (Super Admin only)
+app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
+  try {
+    if (req.admin.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super admins can view all admin users' });
+    }
+
+    const admins = await AdminUser.find({}).select('-password').sort({ createdAt: -1 });
+    
+    res.json({
+      admins,
+      total: admins.length
+    });
+  } catch (error) {
+    console.error('Get admins error:', error);
+    res.status(500).json({ error: 'Failed to fetch admin users' });
+  }
+});
+
+// Get Single Admin (Admin can view themselves, Super Admin can view any)
+app.get('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Admin can only view their own profile, Super Admin can view any
+    if (req.admin.role !== 'super_admin' && req.admin._id.toString() !== id) {
+      return res.status(403).json({ error: 'You can only view your own profile' });
+    }
+
+    const admin = await AdminUser.findById(id).select('-password');
+    
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin user not found' });
+    }
+
+    res.json(admin);
+  } catch (error) {
+    console.error('Get admin error:', error);
+    res.status(500).json({ error: 'Failed to fetch admin user' });
+  }
+});
+
 // Create Admin User (Super Admin only)
-app.post('/api/admin/create', authenticateAdmin, async (req, res) => {
+app.post('/api/admin/users', authenticateAdmin, async (req, res) => {
   try {
     if (req.admin.role !== 'super_admin') {
       return res.status(403).json({ error: 'Only super admins can create admin users' });
@@ -889,6 +1653,11 @@ app.post('/api/admin/create', authenticateAdmin, async (req, res) => {
 
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'Username, email, and password are required' });
+    }
+
+    // Password strength validation
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
     }
 
     const existingAdmin = await AdminUser.findOne({
@@ -904,7 +1673,8 @@ app.post('/api/admin/create', authenticateAdmin, async (req, res) => {
       username,
       email,
       password: hashedPassword,
-      role
+      role: role === 'super_admin' ? 'super_admin' : 'admin',
+      isActive: true
     });
 
     res.status(201).json({
@@ -913,12 +1683,213 @@ app.post('/api/admin/create', authenticateAdmin, async (req, res) => {
         id: admin._id,
         username: admin.username,
         email: admin.email,
-        role: admin.role
+        role: admin.role,
+        isActive: admin.isActive,
+        createdAt: admin.createdAt
       }
     });
   } catch (error) {
     console.error('Create admin error:', error);
     res.status(500).json({ error: 'Failed to create admin user' });
+  }
+});
+
+// Update Admin User (Admin can update themselves, Super Admin can update any)
+app.put('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, email, role, isActive } = req.body;
+
+    // Admin can only update their own profile (except role), Super Admin can update any
+    if (req.admin.role !== 'super_admin' && req.admin._id.toString() !== id) {
+      return res.status(403).json({ error: 'You can only update your own profile' });
+    }
+
+    // Only super admin can change roles and active status
+    if ((role || isActive !== undefined) && req.admin.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super admins can change role or active status' });
+    }
+
+    const admin = await AdminUser.findById(id);
+    
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin user not found' });
+    }
+
+    // Check if username/email already exists (excluding current user)
+    if (username || email) {
+      const existingAdmin = await AdminUser.findOne({
+        _id: { $ne: id },
+        $or: [
+          ...(username ? [{ username }] : []),
+          ...(email ? [{ email }] : [])
+        ]
+      });
+
+      if (existingAdmin) {
+        return res.status(400).json({ error: 'Username or email already exists' });
+      }
+    }
+
+    // Update fields
+    if (username) admin.username = username;
+    if (email) admin.email = email;
+    if (role && req.admin.role === 'super_admin') {
+      admin.role = role === 'super_admin' ? 'super_admin' : 'admin';
+    }
+    if (isActive !== undefined && req.admin.role === 'super_admin') {
+      admin.isActive = isActive;
+    }
+
+    await admin.save();
+
+    res.json({
+      message: 'Admin user updated successfully',
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role,
+        isActive: admin.isActive,
+        updatedAt: admin.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('Update admin error:', error);
+    res.status(500).json({ error: 'Failed to update admin user' });
+  }
+});
+
+// Change Admin Password
+app.put('/api/admin/users/:id/password', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currentPassword, newPassword } = req.body;
+
+    // Admin can only change their own password, Super Admin can change any
+    if (req.admin.role !== 'super_admin' && req.admin._id.toString() !== id) {
+      return res.status(403).json({ error: 'You can only change your own password' });
+    }
+
+    if (!newPassword) {
+      return res.status(400).json({ error: 'New password is required' });
+    }
+
+    // Password strength validation
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    const admin = await AdminUser.findById(id);
+    
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin user not found' });
+    }
+
+    // If changing own password, verify current password
+    if (req.admin._id.toString() === id) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required' });
+      }
+
+      const isValidPassword = await bcrypt.compare(currentPassword, admin.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: 'Current password is incorrect' });
+      }
+    }
+
+    // Update password
+    admin.password = await bcrypt.hash(newPassword, 10);
+    await admin.save();
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// Delete Admin User (Super Admin only, cannot delete self)
+app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
+  try {
+    if (req.admin.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super admins can delete admin users' });
+    }
+
+    const { id } = req.params;
+
+    // Cannot delete self
+    if (req.admin._id.toString() === id) {
+      return res.status(400).json({ error: 'You cannot delete your own account' });
+    }
+
+    const admin = await AdminUser.findById(id);
+    
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin user not found' });
+    }
+
+    await AdminUser.findByIdAndDelete(id);
+
+    res.json({ 
+      message: 'Admin user deleted successfully',
+      deletedAdmin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email
+      }
+    });
+  } catch (error) {
+    console.error('Delete admin error:', error);
+    res.status(500).json({ error: 'Failed to delete admin user' });
+  }
+});
+
+// Toggle Admin Active Status (Super Admin only)
+app.patch('/api/admin/users/:id/toggle-active', authenticateAdmin, async (req, res) => {
+  try {
+    if (req.admin.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super admins can toggle admin status' });
+    }
+
+    const { id } = req.params;
+
+    // Cannot deactivate self
+    if (req.admin._id.toString() === id) {
+      return res.status(400).json({ error: 'You cannot deactivate your own account' });
+    }
+
+    const admin = await AdminUser.findById(id);
+    
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin user not found' });
+    }
+
+    admin.isActive = !admin.isActive;
+    await admin.save();
+
+    res.json({ 
+      message: `Admin user ${admin.isActive ? 'activated' : 'deactivated'} successfully`,
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        isActive: admin.isActive
+      }
+    });
+  } catch (error) {
+    console.error('Toggle admin status error:', error);
+    res.status(500).json({ error: 'Failed to toggle admin status' });
+  }
+});
+
+// Get Current Admin Profile
+app.get('/api/admin/me', authenticateAdmin, async (req, res) => {
+  try {
+    const admin = await AdminUser.findById(req.admin._id).select('-password');
+    res.json(admin);
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
 
@@ -1259,6 +2230,35 @@ app.delete('/api/calculator-submissions/:id', authenticateAdmin, async (req, res
     res.json({ message: 'Calculator submission deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete calculator submission' });
+  }
+});
+
+// Seed Admin User (One-time setup)
+app.post('/api/seed-admin', async (req, res) => {
+  try {
+    const existingAdmin = await AdminUser.findOne({ username: 'admin' });
+    
+    if (existingAdmin) {
+      return res.json({ message: 'Admin user already exists', username: 'admin' });
+    }
+    
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    
+    await AdminUser.create({
+      username: 'admin',
+      email: 'admin@liquidata.com',
+      password: hashedPassword,
+      role: 'super_admin',
+      isActive: true
+    });
+    
+    res.json({ 
+      message: 'Admin user created successfully',
+      username: 'admin',
+      password: 'admin123'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create admin user' });
   }
 });
 
