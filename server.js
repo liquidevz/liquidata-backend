@@ -1223,6 +1223,16 @@ app.post('/api/contact-submissions', async (req, res) => {
   }
 });
 
+app.delete('/api/contact-submissions/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await ContactSubmission.findByIdAndDelete(id);
+    res.json({ message: 'Submission deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete submission' });
+  }
+});
+
 // Calculator Submissions
 app.get('/api/calculator-submissions', async (req, res) => {
   try {
@@ -1239,6 +1249,16 @@ app.post('/api/calculator-submissions', async (req, res) => {
     res.status(201).json(submission);
   } catch (error) {
     res.status(500).json({ error: 'Failed to save calculator submission' });
+  }
+});
+
+app.delete('/api/calculator-submissions/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await CalculatorSubmission.findByIdAndDelete(id);
+    res.json({ message: 'Calculator submission deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete calculator submission' });
   }
 });
 

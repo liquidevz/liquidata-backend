@@ -100,3 +100,4 @@ docker-compose*.yml
 # Scripts that shouldn't be in container
 scripts/
 *.sh
+

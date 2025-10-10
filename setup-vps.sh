@@ -177,3 +177,4 @@ echo "  View logs: journalctl -u liquidata-backend -f"
 echo "  Restart service: systemctl restart liquidata-backend"
 echo "  Check Docker containers: docker ps"
 echo "  View application logs: cd $APP_DIR && docker-compose logs -f"
+
