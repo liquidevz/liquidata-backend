@@ -1132,7 +1132,12 @@ app.get('/', (req, res) => {
 });
 
 mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://myliquidata:myliquidata@liquidata-backend.pje93kc.mongodb.net/?retryWrites=true&w=majority&appName=liquidata-backend')
-  .then(() => console.log('MongoDB connected successfully.'))
+  .then(async () => {
+    console.log('MongoDB connected successfully.');
+    // Auto-seed calculator configuration
+    const { autoSeedCalculator } = require('./auto-seed-calculator');
+    await autoSeedCalculator(Calculator);
+  })
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Admin User Schema
