@@ -2236,6 +2236,214 @@ app.get('/api/admin/calculator/analytics', authenticateAdmin, async (req, res) =
   }
 });
 
+// Comprehensive Dashboard API (Admin only)
+app.get('/api/admin/dashboard', authenticateAdmin, async (req, res) => {
+  try {
+    const { timeRange = '7d' } = req.query; // 7d, 30d, 90d, 1y
+    
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    
+    switch (timeRange) {
+      case '7d':
+        startDate.setDate(endDate.getDate() - 7);
+        break;
+      case '30d':
+        startDate.setDate(endDate.getDate() - 30);
+        break;
+      case '90d':
+        startDate.setDate(endDate.getDate() - 90);
+        break;
+      case '1y':
+        startDate.setFullYear(endDate.getFullYear() - 1);
+        break;
+      default:
+        startDate.setDate(endDate.getDate() - 7);
+    }
+
+    // Get all submissions
+    const [
+      calculatorSubmissions,
+      contactSubmissions,
+      recentCalculatorSubs,
+      recentContactSubs,
+      calculator
+    ] = await Promise.all([
+      CalculatorSubmission.find({ createdAt: { $gte: startDate } }).sort({ createdAt: -1 }),
+      ContactSubmission.find({ createdAt: { $gte: startDate } }).sort({ createdAt: -1 }),
+      CalculatorSubmission.find().sort({ createdAt: -1 }).limit(10),
+      ContactSubmission.find().sort({ createdAt: -1 }).limit(10),
+      Calculator.findOne({ isActive: true })
+    ]);
+
+    // Calculate previous period for comparison
+    const prevStartDate = new Date(startDate);
+    const prevEndDate = new Date(startDate);
+    const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+    prevStartDate.setDate(prevStartDate.getDate() - daysDiff);
+
+    const [prevCalculatorCount, prevContactCount] = await Promise.all([
+      CalculatorSubmission.countDocuments({ 
+        createdAt: { $gte: prevStartDate, $lt: prevEndDate } 
+      }),
+      ContactSubmission.countDocuments({ 
+        createdAt: { $gte: prevStartDate, $lt: prevEndDate } 
+      })
+    ]);
+
+    // Calculate growth rates
+    const calcGrowth = prevCalculatorCount > 0 
+      ? ((calculatorSubmissions.length - prevCalculatorCount) / prevCalculatorCount) * 100 
+      : 100;
+    
+    const contactGrowth = prevContactCount > 0 
+      ? ((contactSubmissions.length - prevContactCount) / prevContactCount) * 100 
+      : 100;
+
+    // Aggregate project types
+    const projectTypes = {};
+    calculatorSubmissions.forEach(sub => {
+      const type = sub.selections?.projectType || 'Unknown';
+      projectTypes[type] = (projectTypes[type] || 0) + 1;
+    });
+
+    // Aggregate industries
+    const industries = {};
+    calculatorSubmissions.forEach(sub => {
+      const inds = sub.selections?.selectedIndustries || [];
+      inds.forEach(ind => {
+        industries[ind] = (industries[ind] || 0) + 1;
+      });
+    });
+
+    // Aggregate features
+    const features = {};
+    calculatorSubmissions.forEach(sub => {
+      const feats = sub.selections?.selectedFeatures || [];
+      feats.forEach(feat => {
+        features[feat] = (features[feat] || 0) + 1;
+      });
+    });
+
+    // Calculate average project value
+    let totalValue = 0;
+    let valueCount = 0;
+    calculatorSubmissions.forEach(sub => {
+      if (sub.result?.finalPrice) {
+        totalValue += sub.result.finalPrice;
+        valueCount++;
+      }
+    });
+    const avgProjectValue = valueCount > 0 ? Math.round(totalValue / valueCount) : calculator?.basePrice || 0;
+
+    // Calculate daily submissions for chart
+    const dailyData = {};
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateKey = d.toISOString().split('T')[0];
+      dailyData[dateKey] = {
+        calculator: 0,
+        contact: 0,
+        total: 0
+      };
+    }
+
+    calculatorSubmissions.forEach(sub => {
+      const dateKey = sub.createdAt.toISOString().split('T')[0];
+      if (dailyData[dateKey]) {
+        dailyData[dateKey].calculator++;
+        dailyData[dateKey].total++;
+      }
+    });
+
+    contactSubmissions.forEach(sub => {
+      const dateKey = sub.createdAt.toISOString().split('T')[0];
+      if (dailyData[dateKey]) {
+        dailyData[dateKey].contact++;
+        dailyData[dateKey].total++;
+      }
+    });
+
+    // Get top project types (sorted)
+    const topProjectTypes = Object.entries(projectTypes)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([type, count]) => ({ type, count }));
+
+    // Get top industries (sorted)
+    const topIndustries = Object.entries(industries)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([industry, count]) => ({ industry, count }));
+
+    // Get top features (sorted)
+    const topFeatures = Object.entries(features)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([feature, count]) => ({ feature, count }));
+
+    // Response
+    res.json({
+      timeRange,
+      period: {
+        start: startDate.toISOString(),
+        end: endDate.toISOString(),
+        days: daysDiff
+      },
+      overview: {
+        totalLeads: calculatorSubmissions.length + contactSubmissions.length,
+        calculatorSubmissions: calculatorSubmissions.length,
+        contactSubmissions: contactSubmissions.length,
+        totalGrowth: Math.round((calcGrowth + contactGrowth) / 2),
+        calculatorGrowth: Math.round(calcGrowth),
+        contactGrowth: Math.round(contactGrowth),
+        avgProjectValue: avgProjectValue,
+        currency: calculator?.currency || 'INR',
+        conversionRate: calculatorSubmissions.length > 0 
+          ? Math.round((contactSubmissions.length / calculatorSubmissions.length) * 100) 
+          : 0
+      },
+      trends: {
+        daily: Object.entries(dailyData).map(([date, data]) => ({
+          date,
+          ...data
+        })),
+        projectTypes: topProjectTypes,
+        industries: topIndustries,
+        features: topFeatures
+      },
+      recentActivity: {
+        calculatorSubmissions: recentCalculatorSubs.map(sub => ({
+          id: sub._id,
+          projectType: sub.selections?.projectType,
+          estimatedValue: sub.result?.finalPrice,
+          currency: sub.result?.currency || 'INR',
+          contactEmail: sub.contactInfo?.email,
+          contactName: sub.contactInfo?.name,
+          createdAt: sub.createdAt
+        })),
+        contactSubmissions: recentContactSubs.map(sub => ({
+          id: sub._id,
+          name: sub.name,
+          email: sub.email,
+          company: sub.company,
+          budget: sub.budget,
+          createdAt: sub.createdAt
+        }))
+      },
+      performance: {
+        avgResponseTime: '24h', // Placeholder
+        systemUptime: 99.9, // Placeholder
+        activeCalculatorVersion: calculator?.version || '1.0',
+        totalSteps: calculator?.steps?.length || 0
+      }
+    });
+  } catch (error) {
+    console.error('Dashboard API error:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+});
+
 // Simple condition evaluator
 function evaluateCondition(condition, selections) {
   if (condition.type === 'equals') {
