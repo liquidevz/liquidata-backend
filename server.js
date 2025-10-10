@@ -29,15 +29,22 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const swaggerSpec = {
   openapi: '3.0.0',
   info: {
-    title: 'DevFlow Calculator API',
+    title: 'Liquidata API',
     version: '2.0.0',
     description: 'Enhanced Calculator API with Admin Management and Indian Pricing (INR)',
     contact: {
-      name: 'DevFlow API Support',
-      email: 'api@devflow.com'
+      name: 'Liquidata API Support',
+      email: 'connect@liquidata.dev'
     }
   },
-  servers: [{ url: `http://localhost:${PORT}` }],
+  servers: [
+    { 
+      url: process.env.NODE_ENV === 'production' 
+        ? 'https://liquidata-backend.onrender.com' 
+        : `http://localhost:${PORT}`,
+      description: process.env.NODE_ENV === 'production' ? 'Production Server' : 'Development Server'
+    }
+  ],
   components: {
     securitySchemes: {
       bearerAuth: {
