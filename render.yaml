@@ -3,7 +3,7 @@ services:
     name: liquidata-backend
     env: node
     buildCommand: npm ci --only=production
-    startCommand: npm start
+    startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
