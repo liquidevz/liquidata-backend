@@ -2187,8 +2187,8 @@ app.put('/api/contact-form', async (req, res) => {
   }
 });
 
-// Contact Submissions
-app.get('/api/contact-submissions', async (req, res) => {
+// Contact Submissions (Admin only - view submissions)
+app.get('/api/contact-submissions', authenticateAdmin, async (req, res) => {
   try {
     const submissions = await ContactSubmission.find({}).sort({ createdAt: -1 });
     res.json(submissions);
@@ -2197,6 +2197,7 @@ app.get('/api/contact-submissions', async (req, res) => {
   }
 });
 
+// Public endpoint - anyone can submit contact form
 app.post('/api/contact-submissions', async (req, res) => {
   try {
     const submission = await ContactSubmission.create(req.body);
@@ -2206,6 +2207,7 @@ app.post('/api/contact-submissions', async (req, res) => {
   }
 });
 
+// Admin only - delete contact submission
 app.delete('/api/contact-submissions/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -2216,8 +2218,8 @@ app.delete('/api/contact-submissions/:id', authenticateAdmin, async (req, res) =
   }
 });
 
-// Calculator Submissions
-app.get('/api/calculator-submissions', async (req, res) => {
+// Calculator Submissions (Admin only - view submissions)
+app.get('/api/calculator-submissions', authenticateAdmin, async (req, res) => {
   try {
     const submissions = await CalculatorSubmission.find({}).sort({ createdAt: -1 });
     res.json(submissions);
@@ -2226,6 +2228,7 @@ app.get('/api/calculator-submissions', async (req, res) => {
   }
 });
 
+// Public endpoint - anyone can submit calculator data
 app.post('/api/calculator-submissions', async (req, res) => {
   try {
     const submission = await CalculatorSubmission.create(req.body);
@@ -2235,6 +2238,7 @@ app.post('/api/calculator-submissions', async (req, res) => {
   }
 });
 
+// Admin only - delete calculator submission
 app.delete('/api/calculator-submissions/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
