@@ -4,6 +4,9 @@ const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -24,6 +27,62 @@ process.on('unhandledRejection', (reason, promise) => {
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve static files for uploads
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
+// Ensure upload directories exist
+const uploadDirs = [
+  'public/uploads',
+  'public/uploads/case-studies',
+  'public/uploads/blogs',
+  'public/uploads/logos'
+];
+
+uploadDirs.forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// Multer configuration for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    let uploadPath = 'public/uploads';
+    
+    if (req.route.path.includes('case-studies')) {
+      uploadPath = 'public/uploads/case-studies';
+    } else if (req.route.path.includes('blogs')) {
+      uploadPath = 'public/uploads/blogs';
+    } else if (req.route.path.includes('logos')) {
+      uploadPath = 'public/uploads/logos';
+    }
+    
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = /jpeg|jpg|png|gif|webp|svg/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 // Swagger setup
 const swaggerSpec = {
@@ -1373,11 +1432,108 @@ const calculatorSubmissionSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+// Case Study Schema
+const caseStudySchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  slug: { type: String, required: true, unique: true },
+  subtitle: { type: String },
+  description: { type: String, required: true },
+  content: { type: String, required: true }, // Rich HTML content
+  excerpt: { type: String, required: true },
+  
+  // Media
+  featuredImage: { type: String, required: true },
+  gallery: [{ type: String }], // Array of image URLs
+  
+  // Project details
+  client: { type: String, required: true },
+  industry: { type: String, required: true },
+  projectType: { type: String, required: true },
+  duration: { type: String },
+  teamSize: { type: String },
+  technologies: [{ type: String }],
+  
+  // Project metrics
+  metrics: [{
+    label: { type: String },
+    value: { type: String },
+    description: { type: String }
+  }],
+  
+  // Links
+  liveUrl: { type: String },
+  githubUrl: { type: String },
+  
+  // SEO
+  metaTitle: { type: String },
+  metaDescription: { type: String },
+  keywords: [{ type: String }],
+  
+  // Status
+  status: { type: String, enum: ['draft', 'published', 'archived'], default: 'draft' },
+  featured: { type: Boolean, default: false },
+  
+  // Timestamps
+  publishedAt: { type: Date },
+  
+  // Author
+  author: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminUser' }
+}, { timestamps: true });
+
+// Blog Schema
+const blogSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  slug: { type: String, required: true, unique: true },
+  content: { type: String, required: true }, // Rich HTML content
+  excerpt: { type: String, required: true },
+  
+  // Media
+  featuredImage: { type: String, required: true },
+  
+  // Categories and Tags
+  category: { type: String, required: true },
+  tags: [{ type: String }],
+  
+  // SEO
+  metaTitle: { type: String },
+  metaDescription: { type: String },
+  keywords: [{ type: String }],
+  
+  // Reading time
+  readingTime: { type: Number }, // in minutes
+  
+  // Status
+  status: { type: String, enum: ['draft', 'published', 'archived'], default: 'draft' },
+  featured: { type: Boolean, default: false },
+  
+  // Engagement
+  views: { type: Number, default: 0 },
+  likes: { type: Number, default: 0 },
+  
+  // Timestamps
+  publishedAt: { type: Date },
+  
+  // Author
+  author: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminUser' }
+}, { timestamps: true });
+
+// Blog Category Schema
+const blogCategorySchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true },
+  slug: { type: String, required: true, unique: true },
+  description: { type: String },
+  color: { type: String, default: '#3B82F6' },
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
 const AdminUser = mongoose.model('AdminUser', adminUserSchema);
 const Calculator = mongoose.model('Calculator', calculatorSchema);
 const ContactForm = mongoose.model('ContactForm', contactFormSchema);
 const ContactSubmission = mongoose.model('ContactSubmission', contactSubmissionSchema);
 const CalculatorSubmission = mongoose.model('CalculatorSubmission', calculatorSubmissionSchema);
+const CaseStudy = mongoose.model('CaseStudy', caseStudySchema);
+const Blog = mongoose.model('Blog', blogSchema);
+const BlogCategory = mongoose.model('BlogCategory', blogCategorySchema);
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'devflow_calculator_secret_2024';
@@ -2608,6 +2764,707 @@ app.post('/api/seed-admin', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create admin user' });
+  }
+});
+
+// ============= CASE STUDY APIs =============
+
+// Helper function to generate slug
+const generateSlug = (title) => {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9 -]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim('-');
+};
+
+// Helper function to calculate reading time
+const calculateReadingTime = (content) => {
+  const wordsPerMinute = 200;
+  const words = content.replace(/<[^>]*>/g, '').split(/\s+/).length;
+  return Math.ceil(words / wordsPerMinute);
+};
+
+// Get all case studies (Public)
+app.get('/api/case-studies', async (req, res) => {
+  try {
+    const { 
+      status = 'published', 
+      featured, 
+      industry, 
+      projectType, 
+      limit = 10, 
+      page = 1,
+      search 
+    } = req.query;
+    
+    const query = { status };
+    
+    if (featured !== undefined) {
+      query.featured = featured === 'true';
+    }
+    
+    if (industry) {
+      query.industry = { $regex: industry, $options: 'i' };
+    }
+    
+    if (projectType) {
+      query.projectType = { $regex: projectType, $options: 'i' };
+    }
+    
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { client: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const [caseStudies, total] = await Promise.all([
+      CaseStudy.find(query)
+        .populate('author', 'username email')
+        .sort({ featured: -1, publishedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      CaseStudy.countDocuments(query)
+    ]);
+    
+    res.json({
+      caseStudies,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit)),
+        total,
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get case studies error:', error);
+    res.status(500).json({ error: 'Failed to fetch case studies' });
+  }
+});
+
+// Get single case study by slug (Public)
+app.get('/api/case-studies/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    
+    const caseStudy = await CaseStudy.findOne({ 
+      slug, 
+      status: 'published' 
+    }).populate('author', 'username email');
+    
+    if (!caseStudy) {
+      return res.status(404).json({ error: 'Case study not found' });
+    }
+    
+    res.json(caseStudy);
+  } catch (error) {
+    console.error('Get case study error:', error);
+    res.status(500).json({ error: 'Failed to fetch case study' });
+  }
+});
+
+// Get all case studies for admin (Admin only)
+app.get('/api/admin/case-studies', authenticateAdmin, async (req, res) => {
+  try {
+    const { 
+      status, 
+      featured, 
+      industry, 
+      projectType, 
+      limit = 20, 
+      page = 1,
+      search 
+    } = req.query;
+    
+    const query = {};
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    if (featured !== undefined) {
+      query.featured = featured === 'true';
+    }
+    
+    if (industry) {
+      query.industry = { $regex: industry, $options: 'i' };
+    }
+    
+    if (projectType) {
+      query.projectType = { $regex: projectType, $options: 'i' };
+    }
+    
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { client: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const [caseStudies, total] = await Promise.all([
+      CaseStudy.find(query)
+        .populate('author', 'username email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      CaseStudy.countDocuments(query)
+    ]);
+    
+    res.json({
+      caseStudies,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit)),
+        total,
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get admin case studies error:', error);
+    res.status(500).json({ error: 'Failed to fetch case studies' });
+  }
+});
+
+// Create case study (Admin only)
+app.post('/api/admin/case-studies', authenticateAdmin, async (req, res) => {
+  try {
+    const caseStudyData = {
+      ...req.body,
+      author: req.admin._id
+    };
+    
+    // Generate slug if not provided
+    if (!caseStudyData.slug) {
+      caseStudyData.slug = generateSlug(caseStudyData.title);
+    }
+    
+    // Check if slug already exists
+    const existingCaseStudy = await CaseStudy.findOne({ slug: caseStudyData.slug });
+    if (existingCaseStudy) {
+      caseStudyData.slug = `${caseStudyData.slug}-${Date.now()}`;
+    }
+    
+    // Set published date if status is published
+    if (caseStudyData.status === 'published' && !caseStudyData.publishedAt) {
+      caseStudyData.publishedAt = new Date();
+    }
+    
+    const caseStudy = await CaseStudy.create(caseStudyData);
+    const populatedCaseStudy = await CaseStudy.findById(caseStudy._id)
+      .populate('author', 'username email');
+    
+    res.status(201).json({
+      message: 'Case study created successfully',
+      caseStudy: populatedCaseStudy
+    });
+  } catch (error) {
+    console.error('Create case study error:', error);
+    res.status(500).json({ error: 'Failed to create case study' });
+  }
+});
+
+// Update case study (Admin only)
+app.put('/api/admin/case-studies/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = { ...req.body };
+    
+    // Generate new slug if title changed
+    if (updateData.title) {
+      const newSlug = generateSlug(updateData.title);
+      const existingCaseStudy = await CaseStudy.findOne({ 
+        slug: newSlug, 
+        _id: { $ne: id } 
+      });
+      
+      if (!existingCaseStudy) {
+        updateData.slug = newSlug;
+      }
+    }
+    
+    // Set published date if status changed to published
+    if (updateData.status === 'published') {
+      const currentCaseStudy = await CaseStudy.findById(id);
+      if (currentCaseStudy.status !== 'published') {
+        updateData.publishedAt = new Date();
+      }
+    }
+    
+    const caseStudy = await CaseStudy.findByIdAndUpdate(
+      id, 
+      updateData, 
+      { new: true }
+    ).populate('author', 'username email');
+    
+    if (!caseStudy) {
+      return res.status(404).json({ error: 'Case study not found' });
+    }
+    
+    res.json({
+      message: 'Case study updated successfully',
+      caseStudy
+    });
+  } catch (error) {
+    console.error('Update case study error:', error);
+    res.status(500).json({ error: 'Failed to update case study' });
+  }
+});
+
+// Delete case study (Admin only)
+app.delete('/api/admin/case-studies/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const caseStudy = await CaseStudy.findByIdAndDelete(id);
+    
+    if (!caseStudy) {
+      return res.status(404).json({ error: 'Case study not found' });
+    }
+    
+    res.json({ message: 'Case study deleted successfully' });
+  } catch (error) {
+    console.error('Delete case study error:', error);
+    res.status(500).json({ error: 'Failed to delete case study' });
+  }
+});
+
+// ============= BLOG APIs =============
+
+// Get all blog categories (Public)
+app.get('/api/blog-categories', async (req, res) => {
+  try {
+    const categories = await BlogCategory.find({ isActive: true }).sort({ name: 1 });
+    res.json(categories);
+  } catch (error) {
+    console.error('Get blog categories error:', error);
+    res.status(500).json({ error: 'Failed to fetch blog categories' });
+  }
+});
+
+// Get all blogs (Public)
+app.get('/api/blogs', async (req, res) => {
+  try {
+    const { 
+      status = 'published', 
+      featured, 
+      category, 
+      tags, 
+      limit = 10, 
+      page = 1,
+      search 
+    } = req.query;
+    
+    const query = { status };
+    
+    if (featured !== undefined) {
+      query.featured = featured === 'true';
+    }
+    
+    if (category) {
+      query.category = { $regex: category, $options: 'i' };
+    }
+    
+    if (tags) {
+      const tagArray = tags.split(',').map(tag => tag.trim());
+      query.tags = { $in: tagArray };
+    }
+    
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { excerpt: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const [blogs, total] = await Promise.all([
+      Blog.find(query)
+        .populate('author', 'username email')
+        .sort({ featured: -1, publishedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Blog.countDocuments(query)
+    ]);
+    
+    res.json({
+      blogs,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit)),
+        total,
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get blogs error:', error);
+    res.status(500).json({ error: 'Failed to fetch blogs' });
+  }
+});
+
+// Get single blog by slug (Public)
+app.get('/api/blogs/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    
+    const blog = await Blog.findOne({ 
+      slug, 
+      status: 'published' 
+    }).populate('author', 'username email');
+    
+    if (!blog) {
+      return res.status(404).json({ error: 'Blog post not found' });
+    }
+    
+    // Increment views
+    await Blog.findByIdAndUpdate(blog._id, { $inc: { views: 1 } });
+    
+    res.json(blog);
+  } catch (error) {
+    console.error('Get blog error:', error);
+    res.status(500).json({ error: 'Failed to fetch blog post' });
+  }
+});
+
+// Get all blogs for admin (Admin only)
+app.get('/api/admin/blogs', authenticateAdmin, async (req, res) => {
+  try {
+    const { 
+      status, 
+      featured, 
+      category, 
+      tags, 
+      limit = 20, 
+      page = 1,
+      search 
+    } = req.query;
+    
+    const query = {};
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    if (featured !== undefined) {
+      query.featured = featured === 'true';
+    }
+    
+    if (category) {
+      query.category = { $regex: category, $options: 'i' };
+    }
+    
+    if (tags) {
+      const tagArray = tags.split(',').map(tag => tag.trim());
+      query.tags = { $in: tagArray };
+    }
+    
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { excerpt: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const [blogs, total] = await Promise.all([
+      Blog.find(query)
+        .populate('author', 'username email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Blog.countDocuments(query)
+    ]);
+    
+    res.json({
+      blogs,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit)),
+        total,
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get admin blogs error:', error);
+    res.status(500).json({ error: 'Failed to fetch blogs' });
+  }
+});
+
+// Create blog (Admin only)
+app.post('/api/admin/blogs', authenticateAdmin, async (req, res) => {
+  try {
+    const blogData = {
+      ...req.body,
+      author: req.admin._id
+    };
+    
+    // Generate slug if not provided
+    if (!blogData.slug) {
+      blogData.slug = generateSlug(blogData.title);
+    }
+    
+    // Check if slug already exists
+    const existingBlog = await Blog.findOne({ slug: blogData.slug });
+    if (existingBlog) {
+      blogData.slug = `${blogData.slug}-${Date.now()}`;
+    }
+    
+    // Calculate reading time
+    if (blogData.content) {
+      blogData.readingTime = calculateReadingTime(blogData.content);
+    }
+    
+    // Set published date if status is published
+    if (blogData.status === 'published' && !blogData.publishedAt) {
+      blogData.publishedAt = new Date();
+    }
+    
+    const blog = await Blog.create(blogData);
+    const populatedBlog = await Blog.findById(blog._id)
+      .populate('author', 'username email');
+    
+    res.status(201).json({
+      message: 'Blog post created successfully',
+      blog: populatedBlog
+    });
+  } catch (error) {
+    console.error('Create blog error:', error);
+    res.status(500).json({ error: 'Failed to create blog post' });
+  }
+});
+
+// Update blog (Admin only)
+app.put('/api/admin/blogs/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = { ...req.body };
+    
+    // Generate new slug if title changed
+    if (updateData.title) {
+      const newSlug = generateSlug(updateData.title);
+      const existingBlog = await Blog.findOne({ 
+        slug: newSlug, 
+        _id: { $ne: id } 
+      });
+      
+      if (!existingBlog) {
+        updateData.slug = newSlug;
+      }
+    }
+    
+    // Recalculate reading time if content changed
+    if (updateData.content) {
+      updateData.readingTime = calculateReadingTime(updateData.content);
+    }
+    
+    // Set published date if status changed to published
+    if (updateData.status === 'published') {
+      const currentBlog = await Blog.findById(id);
+      if (currentBlog.status !== 'published') {
+        updateData.publishedAt = new Date();
+      }
+    }
+    
+    const blog = await Blog.findByIdAndUpdate(
+      id, 
+      updateData, 
+      { new: true }
+    ).populate('author', 'username email');
+    
+    if (!blog) {
+      return res.status(404).json({ error: 'Blog post not found' });
+    }
+    
+    res.json({
+      message: 'Blog post updated successfully',
+      blog
+    });
+  } catch (error) {
+    console.error('Update blog error:', error);
+    res.status(500).json({ error: 'Failed to update blog post' });
+  }
+});
+
+// Delete blog (Admin only)
+app.delete('/api/admin/blogs/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const blog = await Blog.findByIdAndDelete(id);
+    
+    if (!blog) {
+      return res.status(404).json({ error: 'Blog post not found' });
+    }
+    
+    res.json({ message: 'Blog post deleted successfully' });
+  } catch (error) {
+    console.error('Delete blog error:', error);
+    res.status(500).json({ error: 'Failed to delete blog post' });
+  }
+});
+
+// ============= BLOG CATEGORY APIs =============
+
+// Get all blog categories for admin (Admin only)
+app.get('/api/admin/blog-categories', authenticateAdmin, async (req, res) => {
+  try {
+    const categories = await BlogCategory.find({}).sort({ name: 1 });
+    res.json(categories);
+  } catch (error) {
+    console.error('Get admin blog categories error:', error);
+    res.status(500).json({ error: 'Failed to fetch blog categories' });
+  }
+});
+
+// Create blog category (Admin only)
+app.post('/api/admin/blog-categories', authenticateAdmin, async (req, res) => {
+  try {
+    const categoryData = { ...req.body };
+    
+    // Generate slug if not provided
+    if (!categoryData.slug) {
+      categoryData.slug = generateSlug(categoryData.name);
+    }
+    
+    const category = await BlogCategory.create(categoryData);
+    
+    res.status(201).json({
+      message: 'Blog category created successfully',
+      category
+    });
+  } catch (error) {
+    console.error('Create blog category error:', error);
+    res.status(500).json({ error: 'Failed to create blog category' });
+  }
+});
+
+// Update blog category (Admin only)
+app.put('/api/admin/blog-categories/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = { ...req.body };
+    
+    // Generate new slug if name changed
+    if (updateData.name) {
+      const newSlug = generateSlug(updateData.name);
+      const existingCategory = await BlogCategory.findOne({ 
+        slug: newSlug, 
+        _id: { $ne: id } 
+      });
+      
+      if (!existingCategory) {
+        updateData.slug = newSlug;
+      }
+    }
+    
+    const category = await BlogCategory.findByIdAndUpdate(
+      id, 
+      updateData, 
+      { new: true }
+    );
+    
+    if (!category) {
+      return res.status(404).json({ error: 'Blog category not found' });
+    }
+    
+    res.json({
+      message: 'Blog category updated successfully',
+      category
+    });
+  } catch (error) {
+    console.error('Update blog category error:', error);
+    res.status(500).json({ error: 'Failed to update blog category' });
+  }
+});
+
+// Delete blog category (Admin only)
+app.delete('/api/admin/blog-categories/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const category = await BlogCategory.findByIdAndDelete(id);
+    
+    if (!category) {
+      return res.status(404).json({ error: 'Blog category not found' });
+    }
+    
+    res.json({ message: 'Blog category deleted successfully' });
+  } catch (error) {
+    console.error('Delete blog category error:', error);
+    res.status(500).json({ error: 'Failed to delete blog category' });
+  }
+});
+
+// ============= FILE UPLOAD APIs =============
+
+// Upload image for case studies (Admin only)
+app.post('/api/admin/case-studies/upload', authenticateAdmin, upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
+    const imageUrl = `/uploads/case-studies/${req.file.filename}`;
+    
+    res.json({
+      message: 'Image uploaded successfully',
+      imageUrl,
+      filename: req.file.filename
+    });
+  } catch (error) {
+    console.error('Upload case study image error:', error);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
+// Upload image for blogs (Admin only)
+app.post('/api/admin/blogs/upload', authenticateAdmin, upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
+    const imageUrl = `/uploads/blogs/${req.file.filename}`;
+    
+    res.json({
+      message: 'Image uploaded successfully',
+      imageUrl,
+      filename: req.file.filename
+    });
+  } catch (error) {
+    console.error('Upload blog image error:', error);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
+// Upload multiple images for case study gallery (Admin only)
+app.post('/api/admin/case-studies/upload-gallery', authenticateAdmin, upload.array('images', 10), (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'No files uploaded' });
+    }
+    
+    const imageUrls = req.files.map(file => `/uploads/case-studies/${file.filename}`);
+    
+    res.json({
+      message: 'Images uploaded successfully',
+      imageUrls,
+      count: req.files.length
+    });
+  } catch (error) {
+    console.error('Upload gallery images error:', error);
+    res.status(500).json({ error: 'Failed to upload images' });
   }
 });
 
