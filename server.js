@@ -2938,7 +2938,7 @@ app.post('/api/admin/case-studies', authenticateAdmin, async (req, res) => {
   try {
     const caseStudyData = {
       ...req.body,
-      author: req.admin._id
+      author: req.admin?._id || req.admin?.id
     };
     
     // Generate slug if not provided
@@ -2958,16 +2958,23 @@ app.post('/api/admin/case-studies', authenticateAdmin, async (req, res) => {
     }
     
     const caseStudy = await CaseStudy.create(caseStudyData);
-    const populatedCaseStudy = await CaseStudy.findById(caseStudy._id)
-      .populate('author', 'username email');
+    
+    let result = caseStudy;
+    if (caseStudyData.author) {
+      result = await CaseStudy.findById(caseStudy._id).populate('author', 'username email');
+    }
     
     res.status(201).json({
       message: 'Case study created successfully',
-      caseStudy: populatedCaseStudy
+      caseStudy: result
     });
   } catch (error) {
     console.error('Create case study error:', error);
-    res.status(500).json({ error: 'Failed to create case study' });
+    console.error('Error details:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to create case study',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -3206,7 +3213,7 @@ app.post('/api/admin/blogs', authenticateAdmin, async (req, res) => {
   try {
     const blogData = {
       ...req.body,
-      author: req.admin._id
+      author: req.admin?._id || req.admin?.id
     };
     
     // Generate slug if not provided
@@ -3231,16 +3238,23 @@ app.post('/api/admin/blogs', authenticateAdmin, async (req, res) => {
     }
     
     const blog = await Blog.create(blogData);
-    const populatedBlog = await Blog.findById(blog._id)
-      .populate('author', 'username email');
+    
+    let result = blog;
+    if (blogData.author) {
+      result = await Blog.findById(blog._id).populate('author', 'username email');
+    }
     
     res.status(201).json({
       message: 'Blog post created successfully',
-      blog: populatedBlog
+      blog: result
     });
   } catch (error) {
     console.error('Create blog error:', error);
-    res.status(500).json({ error: 'Failed to create blog post' });
+    console.error('Error details:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to create blog post',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
