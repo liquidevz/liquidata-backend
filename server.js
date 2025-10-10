@@ -1437,18 +1437,18 @@ const caseStudySchema = new mongoose.Schema({
   title: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
   subtitle: { type: String },
-  description: { type: String, required: true },
-  content: { type: String, required: true }, // Rich HTML content
-  excerpt: { type: String, required: true },
+  description: { type: String },
+  content: { type: String },
+  excerpt: { type: String },
   
   // Media
-  featuredImage: { type: String, required: true },
+  featuredImage: { type: String },
   gallery: [{ type: String }], // Array of image URLs
   
   // Project details
-  client: { type: String, required: true },
-  industry: { type: String, required: true },
-  projectType: { type: String, required: true },
+  client: { type: String },
+  industry: { type: String },
+  projectType: { type: String },
   duration: { type: String },
   teamSize: { type: String },
   technologies: [{ type: String }],
@@ -1484,14 +1484,14 @@ const caseStudySchema = new mongoose.Schema({
 const blogSchema = new mongoose.Schema({
   title: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
-  content: { type: String, required: true }, // Rich HTML content
-  excerpt: { type: String, required: true },
+  content: { type: String },
+  excerpt: { type: String },
   
   // Media
-  featuredImage: { type: String, required: true },
+  featuredImage: { type: String },
   
   // Categories and Tags
-  category: { type: String, required: true },
+  category: { type: String },
   tags: [{ type: String }],
   
   // SEO
