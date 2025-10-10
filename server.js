@@ -1772,6 +1772,217 @@ app.get('/api/admin/setup/check', async (req, res) => {
   }
 });
 
+// Auto-seed sample data (Admin only)
+app.post('/api/admin/seed-sample-data', authenticateAdmin, async (req, res) => {
+  try {
+    const adminUser = req.admin;
+    
+    // Check if data already exists
+    const existingCaseStudies = await CaseStudy.countDocuments();
+    const existingBlogs = await Blog.countDocuments();
+    const existingCategories = await BlogCategory.countDocuments();
+    
+    const results = {
+      caseStudies: { created: 0, existed: existingCaseStudies },
+      blogs: { created: 0, existed: existingBlogs },
+      categories: { created: 0, existed: existingCategories }
+    };
+    
+    // Seed Blog Categories
+    if (existingCategories === 0) {
+      const categories = [
+        { name: 'Technology', slug: 'technology', description: 'Latest in tech and software', color: '#3B82F6', isActive: true },
+        { name: 'Design', slug: 'design', description: 'Design insights and trends', color: '#8B5CF6', isActive: true },
+        { name: 'Business', slug: 'business', description: 'Business strategies and growth', color: '#10B981', isActive: true },
+        { name: 'Development', slug: 'development', description: 'Web and app development', color: '#F59E0B', isActive: true },
+        { name: 'Marketing', slug: 'marketing', description: 'Digital marketing insights', color: '#EF4444', isActive: true }
+      ];
+      await BlogCategory.insertMany(categories);
+      results.categories.created = categories.length;
+    }
+    
+    // Seed Case Studies
+    if (existingCaseStudies === 0) {
+      const caseStudies = [
+        {
+          title: 'AI-Powered Analytics Platform',
+          slug: 'ai-powered-analytics-platform',
+          subtitle: 'Transforming data into actionable insights',
+          description: 'We built a comprehensive analytics platform that uses machine learning to provide real-time business intelligence and predictive analytics for enterprise clients.',
+          excerpt: 'A comprehensive analytics platform leveraging AI and machine learning to deliver real-time business intelligence.',
+          content: '<h2>The Challenge</h2><p>Our client needed a way to process millions of data points daily and extract meaningful insights without requiring a team of data scientists.</p><h2>Our Solution</h2><p>We developed an AI-powered platform that automatically analyzes data patterns, detects anomalies, and provides predictive forecasts with 95% accuracy.</p>',
+          featuredImage: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=800&fit=crop',
+          client: 'TechCorp Global',
+          industry: 'Technology',
+          projectType: 'Web Application',
+          duration: '6 months',
+          teamSize: '8 developers',
+          technologies: ['React', 'Python', 'TensorFlow', 'AWS', 'MongoDB'],
+          metrics: [
+            { label: 'Processing Speed', value: '80%', description: 'Faster data analysis' },
+            { label: 'Accuracy', value: '95%', description: 'Prediction accuracy rate' }
+          ],
+          status: 'published',
+          featured: true,
+          publishedAt: new Date('2024-11-15'),
+          author: adminUser._id || adminUser.id
+        },
+        {
+          title: 'E-Commerce Revolution',
+          slug: 'ecommerce-revolution',
+          subtitle: 'Next-generation shopping experience',
+          description: 'A complete overhaul of an e-commerce platform to deliver seamless shopping experiences across all devices.',
+          excerpt: 'Revolutionizing online shopping with personalized experiences and cutting-edge technology.',
+          content: '<h2>Overview</h2><p>We redesigned and rebuilt the entire e-commerce infrastructure to handle 10x traffic with personalized product recommendations.</p>',
+          featuredImage: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=800&fit=crop',
+          client: 'RetailMax',
+          industry: 'E-Commerce',
+          projectType: 'Full Stack Application',
+          duration: '8 months',
+          teamSize: '12 developers',
+          technologies: ['Next.js', 'Node.js', 'PostgreSQL', 'Redis', 'Stripe'],
+          status: 'published',
+          featured: true,
+          publishedAt: new Date('2024-10-20'),
+          author: adminUser._id || adminUser.id
+        },
+        {
+          title: 'Healthcare Management System',
+          slug: 'healthcare-management-system',
+          subtitle: 'Streamlining patient care',
+          description: 'An integrated healthcare management system that connects patients, doctors, and administrators.',
+          excerpt: 'Secure, HIPAA-compliant platform connecting all stakeholders in healthcare delivery.',
+          content: '<h2>The Problem</h2><p>Healthcare providers were using multiple disconnected systems, leading to inefficiencies.</p>',
+          featuredImage: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&h=800&fit=crop',
+          client: 'HealthFirst Medical',
+          industry: 'Healthcare',
+          projectType: 'Enterprise Software',
+          duration: '12 months',
+          teamSize: '15 developers',
+          technologies: ['Angular', 'Java Spring', 'MySQL', 'Docker', 'Kubernetes'],
+          status: 'published',
+          featured: false,
+          publishedAt: new Date('2024-09-10'),
+          author: adminUser._id || adminUser.id
+        },
+        {
+          title: 'FinTech Mobile Banking',
+          slug: 'fintech-mobile-banking',
+          subtitle: 'Banking reimagined for mobile',
+          description: 'A modern mobile banking application with advanced security features and instant payments.',
+          excerpt: 'Revolutionary mobile banking app with cutting-edge security and smart financial management.',
+          content: '<h2>Innovation in Banking</h2><p>We built a mobile-first banking platform that combines security with simplicity.</p>',
+          featuredImage: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&h=800&fit=crop',
+          client: 'NeoBank',
+          industry: 'Finance',
+          projectType: 'Mobile Application',
+          duration: '10 months',
+          teamSize: '10 developers',
+          technologies: ['React Native', 'Node.js', 'MongoDB', 'AWS', 'Blockchain'],
+          status: 'published',
+          featured: true,
+          publishedAt: new Date('2024-12-01'),
+          author: adminUser._id || adminUser.id
+        }
+      ];
+      await CaseStudy.insertMany(caseStudies);
+      results.caseStudies.created = caseStudies.length;
+    }
+    
+    // Seed Blogs
+    if (existingBlogs === 0) {
+      const blogs = [
+        {
+          title: 'The Future of Web Development in 2025',
+          slug: 'future-of-web-development-2025',
+          excerpt: 'Exploring emerging trends and technologies that will shape web development in the coming year.',
+          content: '<h2>Introduction</h2><p>Web development is evolving at an unprecedented pace. In this article, we explore the key trends that will define 2025.</p><h2>Key Trends</h2><h3>1. AI-Powered Development</h3><p>AI tools are becoming integral to the development process.</p>',
+          featuredImage: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&h=800&fit=crop',
+          category: 'Development',
+          tags: ['Web Development', 'Technology Trends', 'AI'],
+          readingTime: 8,
+          status: 'published',
+          featured: true,
+          views: 1250,
+          publishedAt: new Date('2025-01-05'),
+          author: adminUser._id || adminUser.id
+        },
+        {
+          title: 'Designing for Accessibility: Best Practices',
+          slug: 'designing-for-accessibility-best-practices',
+          excerpt: 'A comprehensive guide to creating inclusive digital experiences that work for everyone.',
+          content: '<h2>Why Accessibility Matters</h2><p>Accessibility isn\'t just about compliance—it\'s about creating better experiences for all users.</p>',
+          featuredImage: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=1200&h=800&fit=crop',
+          category: 'Design',
+          tags: ['Accessibility', 'UX Design', 'Web Standards'],
+          readingTime: 12,
+          status: 'published',
+          featured: true,
+          views: 890,
+          publishedAt: new Date('2024-12-28'),
+          author: adminUser._id || adminUser.id
+        },
+        {
+          title: 'Scaling Your SaaS Business: Lessons Learned',
+          slug: 'scaling-saas-business-lessons-learned',
+          excerpt: 'Practical insights from growing a SaaS company from 0 to 10,000 customers.',
+          content: '<h2>The Journey</h2><p>Scaling a SaaS business requires more than just great product.</p>',
+          featuredImage: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&h=800&fit=crop',
+          category: 'Business',
+          tags: ['SaaS', 'Entrepreneurship', 'Growth'],
+          readingTime: 10,
+          status: 'published',
+          featured: false,
+          views: 654,
+          publishedAt: new Date('2024-12-15'),
+          author: adminUser._id || adminUser.id
+        },
+        {
+          title: 'React Server Components: A Deep Dive',
+          slug: 'react-server-components-deep-dive',
+          excerpt: 'Understanding React Server Components and how they\'re changing the way we build React applications.',
+          content: '<h2>What Are Server Components?</h2><p>React Server Components represent a new paradigm in React development.</p>',
+          featuredImage: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=1200&h=800&fit=crop',
+          category: 'Development',
+          tags: ['React', 'Server Components', 'Next.js'],
+          readingTime: 15,
+          status: 'published',
+          featured: true,
+          views: 2100,
+          publishedAt: new Date('2025-01-10'),
+          author: adminUser._id || adminUser.id
+        },
+        {
+          title: 'Building a Design System from Scratch',
+          slug: 'building-design-system-from-scratch',
+          excerpt: 'Step-by-step guide to creating a comprehensive design system for your organization.',
+          content: '<h2>Why Design Systems Matter</h2><p>A design system ensures consistency, improves collaboration, and speeds up development.</p>',
+          featuredImage: 'https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=1200&h=800&fit=crop',
+          category: 'Design',
+          tags: ['Design Systems', 'UI/UX', 'Component Library'],
+          readingTime: 18,
+          status: 'published',
+          featured: false,
+          views: 1420,
+          publishedAt: new Date('2024-12-20'),
+          author: adminUser._id || adminUser.id
+        }
+      ];
+      await Blog.insertMany(blogs);
+      results.blogs.created = blogs.length;
+    }
+    
+    res.json({
+      success: true,
+      message: 'Sample data seeded successfully!',
+      results: results
+    });
+  } catch (error) {
+    console.error('Seed sample data error:', error);
+    res.status(500).json({ error: 'Failed to seed sample data', details: error.message });
+  }
+});
+
 // First-time admin setup (no authentication required, only if no admins exist)
 app.post('/api/admin/setup/first', async (req, res) => {
   try {
