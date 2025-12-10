@@ -922,7 +922,35 @@ const swaggerSpec = {
   }
 };
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Swagger UI configuration options
+const swaggerOptions = {
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    filter: true,
+    syntaxHighlight: {
+      activate: true,
+      theme: 'monokai'
+    },
+    tryItOutEnabled: true,
+    requestInterceptor: (req) => {
+      // Ensure request body is properly formatted
+      if (req.body && typeof req.body === 'string') {
+        try {
+          // Validate JSON
+          JSON.parse(req.body);
+        } catch (e) {
+          console.error('Invalid JSON in request body:', req.body);
+        }
+      }
+      return req;
+    }
+  },
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Liquidata API Documentation'
+};
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOptions));
 
 // Root route - API landing page
 app.get('/', (req, res) => {
