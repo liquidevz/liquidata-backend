@@ -32,25 +32,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
-// Ensure upload directories exist
-const uploadDirs = [
-  'public/uploads',
-  'public/uploads/case-studies',
-  'public/uploads/blogs',
-  'public/uploads/logos'
-];
-
-uploadDirs.forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
-
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     let uploadPath = 'public/uploads';
-    
+
     if (req.route.path.includes('case-studies')) {
       uploadPath = 'public/uploads/case-studies';
     } else if (req.route.path.includes('blogs')) {
@@ -58,7 +44,7 @@ const storage = multer.diskStorage({
     } else if (req.route.path.includes('logos')) {
       uploadPath = 'public/uploads/logos';
     }
-    
+
     cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
@@ -76,7 +62,7 @@ const upload = multer({
     const allowedTypes = /jpeg|jpg|png|gif|webp|svg/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    
+
     if (mimetype && extname) {
       return cb(null, true);
     } else {
@@ -98,9 +84,9 @@ const swaggerSpec = {
     }
   },
   servers: [
-    { 
-      url: process.env.NODE_ENV === 'production' 
-        ? 'https://liquidata-backend.onrender.com' 
+    {
+      url: process.env.NODE_ENV === 'production'
+        ? 'https://liquidata-backend.onrender.com'
         : `http://localhost:${PORT}`,
       description: process.env.NODE_ENV === 'production' ? 'Production Server' : 'Development Server'
     }
@@ -1287,7 +1273,7 @@ app.get('/', (req, res) => {
 </body>
 </html>
   `;
-  
+
   res.send(html);
 });
 
@@ -1441,11 +1427,11 @@ const caseStudySchema = new mongoose.Schema({
   description: { type: String },
   content: { type: String },
   excerpt: { type: String },
-  
+
   // Media
   featuredImage: { type: String },
   gallery: [{ type: String }], // Array of image URLs
-  
+
   // Project details
   client: { type: String },
   industry: { type: String },
@@ -1453,30 +1439,30 @@ const caseStudySchema = new mongoose.Schema({
   duration: { type: String },
   teamSize: { type: String },
   technologies: [{ type: String }],
-  
+
   // Project metrics
   metrics: [{
     label: { type: String },
     value: { type: String },
     description: { type: String }
   }],
-  
+
   // Links
   liveUrl: { type: String },
   githubUrl: { type: String },
-  
+
   // SEO
   metaTitle: { type: String },
   metaDescription: { type: String },
   keywords: [{ type: String }],
-  
+
   // Status
   status: { type: String, enum: ['draft', 'published', 'archived'], default: 'draft' },
   featured: { type: Boolean, default: false },
-  
+
   // Timestamps
   publishedAt: { type: Date },
-  
+
   // Author
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminUser' }
 }, { timestamps: true });
@@ -1487,33 +1473,33 @@ const blogSchema = new mongoose.Schema({
   slug: { type: String, required: true, unique: true },
   content: { type: String },
   excerpt: { type: String },
-  
+
   // Media
   featuredImage: { type: String },
-  
+
   // Categories and Tags
   category: { type: String },
   tags: [{ type: String }],
-  
+
   // SEO
   metaTitle: { type: String },
   metaDescription: { type: String },
   keywords: [{ type: String }],
-  
+
   // Reading time
   readingTime: { type: Number }, // in minutes
-  
+
   // Status
   status: { type: String, enum: ['draft', 'published', 'archived'], default: 'draft' },
   featured: { type: Boolean, default: false },
-  
+
   // Engagement
   views: { type: Number, default: 0 },
   likes: { type: Number, default: 0 },
-  
+
   // Timestamps
   publishedAt: { type: Date },
-  
+
   // Author
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminUser' }
 }, { timestamps: true });
@@ -1543,14 +1529,14 @@ const JWT_SECRET = process.env.JWT_SECRET || 'devflow_calculator_secret_2024';
 const authenticateAdmin = async (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+
     if (!token) {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
     const admin = await AdminUser.findById(decoded.id).select('-password');
-    
+
     if (!admin || !admin.isActive) {
       return res.status(401).json({ error: 'Invalid token or inactive admin.' });
     }
@@ -1580,10 +1566,10 @@ const calculateProjectPrice = (calculator, selections) => {
   if (selections.projectType && calculator.pricingRules?.projectTypeMultipliers) {
     const multiplier = calculator.pricingRules.projectTypeMultipliers.get(selections.projectType) || 1;
     basePrice *= multiplier;
-    breakdown.adjustments.push({ 
-      type: 'Project Type', 
-      factor: multiplier, 
-      description: `${selections.projectType} project complexity` 
+    breakdown.adjustments.push({
+      type: 'Project Type',
+      factor: multiplier,
+      description: `${selections.projectType} project complexity`
     });
   }
 
@@ -1593,8 +1579,8 @@ const calculateProjectPrice = (calculator, selections) => {
       const multiplier = calculator.pricingRules.industryMultipliers.get(industry) || 1;
       if (multiplier !== 1) {
         basePrice *= multiplier;
-        breakdown.adjustments.push({ 
-          type: `Industry: ${industry}`, 
+        breakdown.adjustments.push({
+          type: `Industry: ${industry}`,
           factor: multiplier,
           description: `${industry} industry complexity`
         });
@@ -1608,8 +1594,8 @@ const calculateProjectPrice = (calculator, selections) => {
       const cost = calculator.pricingRules.serviceCosts.get(service) || 0;
       if (cost > 0) {
         basePrice += cost;
-        breakdown.services.push({ 
-          service: service, 
+        breakdown.services.push({
+          service: service,
           cost: cost,
           description: `${service} service`
         });
@@ -1623,8 +1609,8 @@ const calculateProjectPrice = (calculator, selections) => {
       const cost = calculator.pricingRules.featureCosts.get(feature) || 0;
       if (cost > 0) {
         basePrice += cost;
-        breakdown.features.push({ 
-          feature: feature, 
+        breakdown.features.push({
+          feature: feature,
           cost: cost,
           description: `${feature} feature implementation`
         });
@@ -1638,8 +1624,8 @@ const calculateProjectPrice = (calculator, selections) => {
       const cost = calculator.pricingRules.platformCosts.get(platform) || 0;
       if (cost > 0) {
         basePrice += cost;
-        breakdown.platforms.push({ 
-          platform: platform, 
+        breakdown.platforms.push({
+          platform: platform,
           cost: cost,
           description: `${platform} platform development`
         });
@@ -1653,8 +1639,8 @@ const calculateProjectPrice = (calculator, selections) => {
       const cost = calculator.pricingRules.integrationCosts.get(integration) || 0;
       if (cost > 0) {
         basePrice += cost;
-        breakdown.integrations.push({ 
-          integration: integration, 
+        breakdown.integrations.push({
+          integration: integration,
           cost: cost,
           description: `${integration} integration`
         });
@@ -1668,8 +1654,8 @@ const calculateProjectPrice = (calculator, selections) => {
       const cost = calculator.pricingRules.techStackCosts.get(tech) || 0;
       if (cost > 0) {
         basePrice += cost;
-        breakdown.techStack.push({ 
-          tech: tech, 
+        breakdown.techStack.push({
+          tech: tech,
           cost: cost,
           description: `${tech} technology implementation`
         });
@@ -1681,8 +1667,8 @@ const calculateProjectPrice = (calculator, selections) => {
   if (selections.scope && calculator.pricingRules?.scopeMultipliers) {
     const multiplier = calculator.pricingRules.scopeMultipliers.get(selections.scope) || 1;
     basePrice *= multiplier;
-    breakdown.adjustments.push({ 
-      type: 'Project Scope', 
+    breakdown.adjustments.push({
+      type: 'Project Scope',
       factor: multiplier,
       description: `${selections.scope} scope complexity`
     });
@@ -1692,8 +1678,8 @@ const calculateProjectPrice = (calculator, selections) => {
   if (selections.team && calculator.pricingRules?.teamMultipliers) {
     const multiplier = calculator.pricingRules.teamMultipliers.get(selections.team) || 1;
     basePrice *= multiplier;
-    breakdown.adjustments.push({ 
-      type: 'Team Size', 
+    breakdown.adjustments.push({
+      type: 'Team Size',
       factor: multiplier,
       description: `${selections.team} team configuration`
     });
@@ -1703,8 +1689,8 @@ const calculateProjectPrice = (calculator, selections) => {
   if (selections.timeline && calculator.pricingRules?.timelineMultipliers) {
     const multiplier = calculator.pricingRules.timelineMultipliers.get(selections.timeline) || 1;
     basePrice *= multiplier;
-    breakdown.adjustments.push({ 
-      type: 'Timeline', 
+    breakdown.adjustments.push({
+      type: 'Timeline',
       factor: multiplier,
       description: `${selections.timeline} timeline requirement`
     });
@@ -1715,8 +1701,8 @@ const calculateProjectPrice = (calculator, selections) => {
     const cost = calculator.pricingRules.supportCosts.get(selections.support) || 0;
     if (cost > 0) {
       basePrice += cost;
-      breakdown.support.push({ 
-        support: selections.support, 
+      breakdown.support.push({
+        support: selections.support,
         cost: cost,
         description: `${selections.support} support package`
       });
@@ -1762,7 +1748,7 @@ const calculateProjectPrice = (calculator, selections) => {
 app.get('/api/admin/setup/check', async (req, res) => {
   try {
     const adminCount = await AdminUser.countDocuments();
-    res.json({ 
+    res.json({
       hasAdmin: adminCount > 0,
       adminCount: adminCount,
       needsSetup: adminCount === 0
@@ -1777,18 +1763,18 @@ app.get('/api/admin/setup/check', async (req, res) => {
 app.post('/api/admin/seed-sample-data', authenticateAdmin, async (req, res) => {
   try {
     const adminUser = req.admin;
-    
+
     // Check if data already exists
     const existingCaseStudies = await CaseStudy.countDocuments();
     const existingBlogs = await Blog.countDocuments();
     const existingCategories = await BlogCategory.countDocuments();
-    
+
     const results = {
       caseStudies: { created: 0, existed: existingCaseStudies },
       blogs: { created: 0, existed: existingBlogs },
       categories: { created: 0, existed: existingCategories }
     };
-    
+
     // Seed Blog Categories
     if (existingCategories === 0) {
       const categories = [
@@ -1801,7 +1787,7 @@ app.post('/api/admin/seed-sample-data', authenticateAdmin, async (req, res) => {
       await BlogCategory.insertMany(categories);
       results.categories.created = categories.length;
     }
-    
+
     // Seed Case Studies
     if (existingCaseStudies === 0) {
       const caseStudies = [
@@ -1889,7 +1875,7 @@ app.post('/api/admin/seed-sample-data', authenticateAdmin, async (req, res) => {
       await CaseStudy.insertMany(caseStudies);
       results.caseStudies.created = caseStudies.length;
     }
-    
+
     // Seed Blogs
     if (existingBlogs === 0) {
       const blogs = [
@@ -1972,7 +1958,7 @@ app.post('/api/admin/seed-sample-data', authenticateAdmin, async (req, res) => {
       await Blog.insertMany(blogs);
       results.blogs.created = blogs.length;
     }
-    
+
     res.json({
       success: true,
       message: 'Sample data seeded successfully!',
@@ -1989,7 +1975,7 @@ app.post('/api/admin/setup/first', async (req, res) => {
   try {
     // Check if any admin exists
     const existingAdmin = await AdminUser.findOne();
-    
+
     if (existingAdmin) {
       return res.status(400).json({ error: 'Admin already exists. Use login instead.' });
     }
@@ -2045,9 +2031,9 @@ app.post('/api/admin/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    const admin = await AdminUser.findOne({ 
+    const admin = await AdminUser.findOne({
       $or: [{ username }, { email: username }],
-      isActive: true 
+      isActive: true
     });
 
     if (!admin) {
@@ -2088,7 +2074,7 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
     }
 
     const admins = await AdminUser.find({}).select('-password').sort({ createdAt: -1 });
-    
+
     res.json({
       admins,
       total: admins.length
@@ -2103,14 +2089,14 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
 app.get('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Admin can only view their own profile, Super Admin can view any
     if (req.admin.role !== 'super_admin' && req.admin._id.toString() !== id) {
       return res.status(403).json({ error: 'You can only view your own profile' });
     }
 
     const admin = await AdminUser.findById(id).select('-password');
-    
+
     if (!admin) {
       return res.status(404).json({ error: 'Admin user not found' });
     }
@@ -2191,7 +2177,7 @@ app.put('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
     }
 
     const admin = await AdminUser.findById(id);
-    
+
     if (!admin) {
       return res.status(404).json({ error: 'Admin user not found' });
     }
@@ -2261,7 +2247,7 @@ app.put('/api/admin/users/:id/password', authenticateAdmin, async (req, res) => 
     }
 
     const admin = await AdminUser.findById(id);
-    
+
     if (!admin) {
       return res.status(404).json({ error: 'Admin user not found' });
     }
@@ -2304,14 +2290,14 @@ app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
     }
 
     const admin = await AdminUser.findById(id);
-    
+
     if (!admin) {
       return res.status(404).json({ error: 'Admin user not found' });
     }
 
     await AdminUser.findByIdAndDelete(id);
 
-    res.json({ 
+    res.json({
       message: 'Admin user deleted successfully',
       deletedAdmin: {
         id: admin._id,
@@ -2340,7 +2326,7 @@ app.patch('/api/admin/users/:id/toggle-active', authenticateAdmin, async (req, r
     }
 
     const admin = await AdminUser.findById(id);
-    
+
     if (!admin) {
       return res.status(404).json({ error: 'Admin user not found' });
     }
@@ -2348,7 +2334,7 @@ app.patch('/api/admin/users/:id/toggle-active', authenticateAdmin, async (req, r
     admin.isActive = !admin.isActive;
     await admin.save();
 
-    res.json({ 
+    res.json({
       message: `Admin user ${admin.isActive ? 'activated' : 'deactivated'} successfully`,
       admin: {
         id: admin._id,
@@ -2394,17 +2380,17 @@ app.get('/api/calculator', async (req, res) => {
 app.put('/api/admin/calculator', authenticateAdmin, async (req, res) => {
   try {
     let calculator = await Calculator.findOne({ isActive: true });
-    
+
     if (!calculator) {
       calculator = await Calculator.create(req.body);
     } else {
       calculator = await Calculator.findByIdAndUpdate(
-        calculator._id, 
-        { ...req.body, updatedAt: new Date() }, 
+        calculator._id,
+        { ...req.body, updatedAt: new Date() },
         { new: true }
       );
     }
-    
+
     res.json({
       message: 'Calculator updated successfully',
       calculator
@@ -2419,19 +2405,19 @@ app.put('/api/admin/calculator', authenticateAdmin, async (req, res) => {
 app.post('/api/calculator/calculate', async (req, res) => {
   try {
     const { selections } = req.body;
-    
+
     if (!selections) {
       return res.status(400).json({ error: 'Selections are required' });
     }
 
     const calculator = await Calculator.findOne({ isActive: true });
-    
+
     if (!calculator) {
       return res.status(404).json({ error: 'Calculator configuration not found' });
     }
-    
+
     const result = calculateProjectPrice(calculator, selections);
-    
+
     res.json(result);
   } catch (error) {
     console.error('Calculate price error:', error);
@@ -2444,16 +2430,16 @@ app.post('/api/calculator/steps', async (req, res) => {
   try {
     const { currentSelections } = req.body;
     const calculator = await Calculator.findOne({ isActive: true });
-    
+
     if (!calculator) {
       return res.status(404).json({ error: 'Calculator configuration not found' });
     }
-    
+
     // Filter steps based on conditions and sort by order
     const availableSteps = calculator.steps
       .filter(step => {
         if (!step.condition) return true;
-        
+
         try {
           const condition = JSON.parse(step.condition);
           return evaluateCondition(condition, currentSelections);
@@ -2462,8 +2448,8 @@ app.post('/api/calculator/steps', async (req, res) => {
         }
       })
       .sort((a, b) => (a.order || 0) - (b.order || 0));
-    
-    res.json({ 
+
+    res.json({
       steps: availableSteps,
       totalSteps: availableSteps.length,
       currentStep: currentSelections?.currentStep || 0
@@ -2480,11 +2466,11 @@ app.post('/api/calculator/steps', async (req, res) => {
 app.get('/api/admin/pricing', authenticateAdmin, async (req, res) => {
   try {
     const calculator = await Calculator.findOne({ isActive: true });
-    
+
     if (!calculator) {
       return res.status(404).json({ error: 'Calculator configuration not found' });
     }
-    
+
     res.json({
       basePrice: calculator.basePrice,
       currency: calculator.currency,
@@ -2501,24 +2487,24 @@ app.get('/api/admin/pricing', authenticateAdmin, async (req, res) => {
 app.put('/api/admin/pricing', authenticateAdmin, async (req, res) => {
   try {
     const { basePrice, pricingRules, pricingConfig } = req.body;
-    
+
     const calculator = await Calculator.findOne({ isActive: true });
-    
+
     if (!calculator) {
       return res.status(404).json({ error: 'Calculator configuration not found' });
     }
-    
+
     const updateData = {};
     if (basePrice !== undefined) updateData.basePrice = basePrice;
     if (pricingRules) updateData.pricingRules = pricingRules;
     if (pricingConfig) updateData.pricingConfig = pricingConfig;
-    
+
     const updatedCalculator = await Calculator.findByIdAndUpdate(
       calculator._id,
       updateData,
       { new: true }
     );
-    
+
     res.json({
       message: 'Pricing configuration updated successfully',
       basePrice: updatedCalculator.basePrice,
@@ -2537,10 +2523,10 @@ app.put('/api/admin/pricing/:ruleType', authenticateAdmin, async (req, res) => {
   try {
     const { ruleType } = req.params;
     const { rules } = req.body;
-    
+
     const validRuleTypes = [
       'projectTypeMultipliers',
-      'industryMultipliers', 
+      'industryMultipliers',
       'scopeMultipliers',
       'teamMultipliers',
       'timelineMultipliers',
@@ -2551,26 +2537,26 @@ app.put('/api/admin/pricing/:ruleType', authenticateAdmin, async (req, res) => {
       'techStackCosts',
       'supportCosts'
     ];
-    
+
     if (!validRuleTypes.includes(ruleType)) {
       return res.status(400).json({ error: 'Invalid rule type' });
     }
-    
+
     const calculator = await Calculator.findOne({ isActive: true });
-    
+
     if (!calculator) {
       return res.status(404).json({ error: 'Calculator configuration not found' });
     }
-    
+
     // Convert rules object to Map
     const ruleMap = new Map(Object.entries(rules));
-    
+
     const updatedCalculator = await Calculator.findByIdAndUpdate(
       calculator._id,
       { [`pricingRules.${ruleType}`]: ruleMap },
       { new: true }
     );
-    
+
     res.json({
       message: `${ruleType} updated successfully`,
       [ruleType]: Object.fromEntries(updatedCalculator.pricingRules[ruleType] || new Map())
@@ -2585,12 +2571,12 @@ app.put('/api/admin/pricing/:ruleType', authenticateAdmin, async (req, res) => {
 app.get('/api/admin/calculator/analytics', authenticateAdmin, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    
+
     // This would typically query calculation logs/submissions
     // For now, return basic stats
     const calculator = await Calculator.findOne({ isActive: true });
     const totalSubmissions = await ContactSubmission.countDocuments();
-    
+
     res.json({
       totalCalculations: totalSubmissions, // Placeholder
       averageProjectValue: calculator?.basePrice || 0,
@@ -2608,11 +2594,11 @@ app.get('/api/admin/calculator/analytics', authenticateAdmin, async (req, res) =
 app.get('/api/admin/dashboard', authenticateAdmin, async (req, res) => {
   try {
     const { timeRange = '7d' } = req.query; // 7d, 30d, 90d, 1y
-    
+
     // Calculate date range
     const endDate = new Date();
     const startDate = new Date();
-    
+
     switch (timeRange) {
       case '7d':
         startDate.setDate(endDate.getDate() - 7);
@@ -2652,21 +2638,21 @@ app.get('/api/admin/dashboard', authenticateAdmin, async (req, res) => {
     prevStartDate.setDate(prevStartDate.getDate() - daysDiff);
 
     const [prevCalculatorCount, prevContactCount] = await Promise.all([
-      CalculatorSubmission.countDocuments({ 
-        createdAt: { $gte: prevStartDate, $lt: prevEndDate } 
+      CalculatorSubmission.countDocuments({
+        createdAt: { $gte: prevStartDate, $lt: prevEndDate }
       }),
-      ContactSubmission.countDocuments({ 
-        createdAt: { $gte: prevStartDate, $lt: prevEndDate } 
+      ContactSubmission.countDocuments({
+        createdAt: { $gte: prevStartDate, $lt: prevEndDate }
       })
     ]);
 
     // Calculate growth rates
-    const calcGrowth = prevCalculatorCount > 0 
-      ? ((calculatorSubmissions.length - prevCalculatorCount) / prevCalculatorCount) * 100 
+    const calcGrowth = prevCalculatorCount > 0
+      ? ((calculatorSubmissions.length - prevCalculatorCount) / prevCalculatorCount) * 100
       : 100;
-    
-    const contactGrowth = prevContactCount > 0 
-      ? ((contactSubmissions.length - prevContactCount) / prevContactCount) * 100 
+
+    const contactGrowth = prevContactCount > 0
+      ? ((contactSubmissions.length - prevContactCount) / prevContactCount) * 100
       : 100;
 
     // Aggregate project types
@@ -2767,8 +2753,8 @@ app.get('/api/admin/dashboard', authenticateAdmin, async (req, res) => {
         contactGrowth: Math.round(contactGrowth),
         avgProjectValue: avgProjectValue,
         currency: calculator?.currency || 'INR',
-        conversionRate: calculatorSubmissions.length > 0 
-          ? Math.round((contactSubmissions.length / calculatorSubmissions.length) * 100) 
+        conversionRate: calculatorSubmissions.length > 0
+          ? Math.round((contactSubmissions.length / calculatorSubmissions.length) * 100)
           : 0
       },
       trends: {
@@ -2930,16 +2916,16 @@ app.post('/api/admin/seed-calculator', authenticateAdmin, async (req, res) => {
   try {
     const { autoSeedCalculator } = require('./auto-seed-calculator');
     const seeded = await autoSeedCalculator(Calculator);
-    
+
     if (seeded) {
       const calculator = await Calculator.findOne({ isActive: true });
-      res.json({ 
+      res.json({
         message: 'Calculator seeded successfully!',
         stepCount: calculator.steps.length
       });
     } else {
       const calculator = await Calculator.findOne({ isActive: true });
-      res.json({ 
+      res.json({
         message: 'Calculator already exists',
         stepCount: calculator.steps.length
       });
@@ -2954,13 +2940,13 @@ app.post('/api/admin/seed-calculator', authenticateAdmin, async (req, res) => {
 app.post('/api/seed-admin', async (req, res) => {
   try {
     const existingAdmin = await AdminUser.findOne({ username: 'admin' });
-    
+
     if (existingAdmin) {
       return res.json({ message: 'Admin user already exists', username: 'admin' });
     }
-    
+
     const hashedPassword = await bcrypt.hash('admin123', 10);
-    
+
     await AdminUser.create({
       username: 'admin',
       email: 'admin@liquidata.com',
@@ -2968,8 +2954,8 @@ app.post('/api/seed-admin', async (req, res) => {
       role: 'super_admin',
       isActive: true
     });
-    
-    res.json({ 
+
+    res.json({
       message: 'Admin user created successfully',
       username: 'admin',
       password: 'admin123'
@@ -3001,30 +2987,30 @@ const calculateReadingTime = (content) => {
 // Get all case studies (Public)
 app.get('/api/case-studies', async (req, res) => {
   try {
-    const { 
-      status = 'published', 
-      featured, 
-      industry, 
-      projectType, 
-      limit = 10, 
+    const {
+      status = 'published',
+      featured,
+      industry,
+      projectType,
+      limit = 10,
       page = 1,
-      search 
+      search
     } = req.query;
-    
+
     const query = { status };
-    
+
     if (featured !== undefined) {
       query.featured = featured === 'true';
     }
-    
+
     if (industry) {
       query.industry = { $regex: industry, $options: 'i' };
     }
-    
+
     if (projectType) {
       query.projectType = { $regex: projectType, $options: 'i' };
     }
-    
+
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -3032,9 +3018,9 @@ app.get('/api/case-studies', async (req, res) => {
         { client: { $regex: search, $options: 'i' } }
       ];
     }
-    
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     const [caseStudies, total] = await Promise.all([
       CaseStudy.find(query)
         .populate('author', 'username email')
@@ -3043,7 +3029,7 @@ app.get('/api/case-studies', async (req, res) => {
         .limit(parseInt(limit)),
       CaseStudy.countDocuments(query)
     ]);
-    
+
     res.json({
       caseStudies,
       pagination: {
@@ -3063,16 +3049,16 @@ app.get('/api/case-studies', async (req, res) => {
 app.get('/api/case-studies/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
-    
-    const caseStudy = await CaseStudy.findOne({ 
-      slug, 
-      status: 'published' 
+
+    const caseStudy = await CaseStudy.findOne({
+      slug,
+      status: 'published'
     }).populate('author', 'username email');
-    
+
     if (!caseStudy) {
       return res.status(404).json({ error: 'Case study not found' });
     }
-    
+
     res.json(caseStudy);
   } catch (error) {
     console.error('Get case study error:', error);
@@ -3083,34 +3069,34 @@ app.get('/api/case-studies/:slug', async (req, res) => {
 // Get all case studies for admin (Admin only)
 app.get('/api/admin/case-studies', authenticateAdmin, async (req, res) => {
   try {
-    const { 
-      status, 
-      featured, 
-      industry, 
-      projectType, 
-      limit = 20, 
+    const {
+      status,
+      featured,
+      industry,
+      projectType,
+      limit = 20,
       page = 1,
-      search 
+      search
     } = req.query;
-    
+
     const query = {};
-    
+
     if (status) {
       query.status = status;
     }
-    
+
     if (featured !== undefined) {
       query.featured = featured === 'true';
     }
-    
+
     if (industry) {
       query.industry = { $regex: industry, $options: 'i' };
     }
-    
+
     if (projectType) {
       query.projectType = { $regex: projectType, $options: 'i' };
     }
-    
+
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -3118,9 +3104,9 @@ app.get('/api/admin/case-studies', authenticateAdmin, async (req, res) => {
         { client: { $regex: search, $options: 'i' } }
       ];
     }
-    
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     const [caseStudies, total] = await Promise.all([
       CaseStudy.find(query)
         .populate('author', 'username email')
@@ -3129,7 +3115,7 @@ app.get('/api/admin/case-studies', authenticateAdmin, async (req, res) => {
         .limit(parseInt(limit)),
       CaseStudy.countDocuments(query)
     ]);
-    
+
     res.json({
       caseStudies,
       pagination: {
@@ -3152,30 +3138,30 @@ app.post('/api/admin/case-studies', authenticateAdmin, async (req, res) => {
       ...req.body,
       author: req.admin?._id || req.admin?.id
     };
-    
+
     // Generate slug if not provided
     if (!caseStudyData.slug) {
       caseStudyData.slug = generateSlug(caseStudyData.title);
     }
-    
+
     // Check if slug already exists
     const existingCaseStudy = await CaseStudy.findOne({ slug: caseStudyData.slug });
     if (existingCaseStudy) {
       caseStudyData.slug = `${caseStudyData.slug}-${Date.now()}`;
     }
-    
+
     // Set published date if status is published
     if (caseStudyData.status === 'published' && !caseStudyData.publishedAt) {
       caseStudyData.publishedAt = new Date();
     }
-    
+
     const caseStudy = await CaseStudy.create(caseStudyData);
-    
+
     let result = caseStudy;
     if (caseStudyData.author) {
       result = await CaseStudy.findById(caseStudy._id).populate('author', 'username email');
     }
-    
+
     res.status(201).json({
       message: 'Case study created successfully',
       caseStudy: result
@@ -3183,7 +3169,7 @@ app.post('/api/admin/case-studies', authenticateAdmin, async (req, res) => {
   } catch (error) {
     console.error('Create case study error:', error);
     console.error('Error details:', error.message);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to create case study',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -3195,20 +3181,20 @@ app.put('/api/admin/case-studies/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
-    
+
     // Generate new slug if title changed
     if (updateData.title) {
       const newSlug = generateSlug(updateData.title);
-      const existingCaseStudy = await CaseStudy.findOne({ 
-        slug: newSlug, 
-        _id: { $ne: id } 
+      const existingCaseStudy = await CaseStudy.findOne({
+        slug: newSlug,
+        _id: { $ne: id }
       });
-      
+
       if (!existingCaseStudy) {
         updateData.slug = newSlug;
       }
     }
-    
+
     // Set published date if status changed to published
     if (updateData.status === 'published') {
       const currentCaseStudy = await CaseStudy.findById(id);
@@ -3216,17 +3202,17 @@ app.put('/api/admin/case-studies/:id', authenticateAdmin, async (req, res) => {
         updateData.publishedAt = new Date();
       }
     }
-    
+
     const caseStudy = await CaseStudy.findByIdAndUpdate(
-      id, 
-      updateData, 
+      id,
+      updateData,
       { new: true }
     ).populate('author', 'username email');
-    
+
     if (!caseStudy) {
       return res.status(404).json({ error: 'Case study not found' });
     }
-    
+
     res.json({
       message: 'Case study updated successfully',
       caseStudy
@@ -3241,13 +3227,13 @@ app.put('/api/admin/case-studies/:id', authenticateAdmin, async (req, res) => {
 app.delete('/api/admin/case-studies/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const caseStudy = await CaseStudy.findByIdAndDelete(id);
-    
+
     if (!caseStudy) {
       return res.status(404).json({ error: 'Case study not found' });
     }
-    
+
     res.json({ message: 'Case study deleted successfully' });
   } catch (error) {
     console.error('Delete case study error:', error);
@@ -3271,31 +3257,31 @@ app.get('/api/blog-categories', async (req, res) => {
 // Get all blogs (Public)
 app.get('/api/blogs', async (req, res) => {
   try {
-    const { 
-      status = 'published', 
-      featured, 
-      category, 
-      tags, 
-      limit = 10, 
+    const {
+      status = 'published',
+      featured,
+      category,
+      tags,
+      limit = 10,
       page = 1,
-      search 
+      search
     } = req.query;
-    
+
     const query = { status };
-    
+
     if (featured !== undefined) {
       query.featured = featured === 'true';
     }
-    
+
     if (category) {
       query.category = { $regex: category, $options: 'i' };
     }
-    
+
     if (tags) {
       const tagArray = tags.split(',').map(tag => tag.trim());
       query.tags = { $in: tagArray };
     }
-    
+
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -3303,9 +3289,9 @@ app.get('/api/blogs', async (req, res) => {
         { content: { $regex: search, $options: 'i' } }
       ];
     }
-    
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     const [blogs, total] = await Promise.all([
       Blog.find(query)
         .populate('author', 'username email')
@@ -3314,7 +3300,7 @@ app.get('/api/blogs', async (req, res) => {
         .limit(parseInt(limit)),
       Blog.countDocuments(query)
     ]);
-    
+
     res.json({
       blogs,
       pagination: {
@@ -3334,19 +3320,19 @@ app.get('/api/blogs', async (req, res) => {
 app.get('/api/blogs/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
-    
-    const blog = await Blog.findOne({ 
-      slug, 
-      status: 'published' 
+
+    const blog = await Blog.findOne({
+      slug,
+      status: 'published'
     }).populate('author', 'username email');
-    
+
     if (!blog) {
       return res.status(404).json({ error: 'Blog post not found' });
     }
-    
+
     // Increment views
     await Blog.findByIdAndUpdate(blog._id, { $inc: { views: 1 } });
-    
+
     res.json(blog);
   } catch (error) {
     console.error('Get blog error:', error);
@@ -3357,35 +3343,35 @@ app.get('/api/blogs/:slug', async (req, res) => {
 // Get all blogs for admin (Admin only)
 app.get('/api/admin/blogs', authenticateAdmin, async (req, res) => {
   try {
-    const { 
-      status, 
-      featured, 
-      category, 
-      tags, 
-      limit = 20, 
+    const {
+      status,
+      featured,
+      category,
+      tags,
+      limit = 20,
       page = 1,
-      search 
+      search
     } = req.query;
-    
+
     const query = {};
-    
+
     if (status) {
       query.status = status;
     }
-    
+
     if (featured !== undefined) {
       query.featured = featured === 'true';
     }
-    
+
     if (category) {
       query.category = { $regex: category, $options: 'i' };
     }
-    
+
     if (tags) {
       const tagArray = tags.split(',').map(tag => tag.trim());
       query.tags = { $in: tagArray };
     }
-    
+
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -3393,9 +3379,9 @@ app.get('/api/admin/blogs', authenticateAdmin, async (req, res) => {
         { content: { $regex: search, $options: 'i' } }
       ];
     }
-    
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     const [blogs, total] = await Promise.all([
       Blog.find(query)
         .populate('author', 'username email')
@@ -3404,7 +3390,7 @@ app.get('/api/admin/blogs', authenticateAdmin, async (req, res) => {
         .limit(parseInt(limit)),
       Blog.countDocuments(query)
     ]);
-    
+
     res.json({
       blogs,
       pagination: {
@@ -3427,35 +3413,35 @@ app.post('/api/admin/blogs', authenticateAdmin, async (req, res) => {
       ...req.body,
       author: req.admin?._id || req.admin?.id
     };
-    
+
     // Generate slug if not provided
     if (!blogData.slug) {
       blogData.slug = generateSlug(blogData.title);
     }
-    
+
     // Check if slug already exists
     const existingBlog = await Blog.findOne({ slug: blogData.slug });
     if (existingBlog) {
       blogData.slug = `${blogData.slug}-${Date.now()}`;
     }
-    
+
     // Calculate reading time
     if (blogData.content) {
       blogData.readingTime = calculateReadingTime(blogData.content);
     }
-    
+
     // Set published date if status is published
     if (blogData.status === 'published' && !blogData.publishedAt) {
       blogData.publishedAt = new Date();
     }
-    
+
     const blog = await Blog.create(blogData);
-    
+
     let result = blog;
     if (blogData.author) {
       result = await Blog.findById(blog._id).populate('author', 'username email');
     }
-    
+
     res.status(201).json({
       message: 'Blog post created successfully',
       blog: result
@@ -3463,7 +3449,7 @@ app.post('/api/admin/blogs', authenticateAdmin, async (req, res) => {
   } catch (error) {
     console.error('Create blog error:', error);
     console.error('Error details:', error.message);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to create blog post',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -3475,25 +3461,25 @@ app.put('/api/admin/blogs/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
-    
+
     // Generate new slug if title changed
     if (updateData.title) {
       const newSlug = generateSlug(updateData.title);
-      const existingBlog = await Blog.findOne({ 
-        slug: newSlug, 
-        _id: { $ne: id } 
+      const existingBlog = await Blog.findOne({
+        slug: newSlug,
+        _id: { $ne: id }
       });
-      
+
       if (!existingBlog) {
         updateData.slug = newSlug;
       }
     }
-    
+
     // Recalculate reading time if content changed
     if (updateData.content) {
       updateData.readingTime = calculateReadingTime(updateData.content);
     }
-    
+
     // Set published date if status changed to published
     if (updateData.status === 'published') {
       const currentBlog = await Blog.findById(id);
@@ -3501,17 +3487,17 @@ app.put('/api/admin/blogs/:id', authenticateAdmin, async (req, res) => {
         updateData.publishedAt = new Date();
       }
     }
-    
+
     const blog = await Blog.findByIdAndUpdate(
-      id, 
-      updateData, 
+      id,
+      updateData,
       { new: true }
     ).populate('author', 'username email');
-    
+
     if (!blog) {
       return res.status(404).json({ error: 'Blog post not found' });
     }
-    
+
     res.json({
       message: 'Blog post updated successfully',
       blog
@@ -3526,13 +3512,13 @@ app.put('/api/admin/blogs/:id', authenticateAdmin, async (req, res) => {
 app.delete('/api/admin/blogs/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const blog = await Blog.findByIdAndDelete(id);
-    
+
     if (!blog) {
       return res.status(404).json({ error: 'Blog post not found' });
     }
-    
+
     res.json({ message: 'Blog post deleted successfully' });
   } catch (error) {
     console.error('Delete blog error:', error);
@@ -3557,14 +3543,14 @@ app.get('/api/admin/blog-categories', authenticateAdmin, async (req, res) => {
 app.post('/api/admin/blog-categories', authenticateAdmin, async (req, res) => {
   try {
     const categoryData = { ...req.body };
-    
+
     // Generate slug if not provided
     if (!categoryData.slug) {
       categoryData.slug = generateSlug(categoryData.name);
     }
-    
+
     const category = await BlogCategory.create(categoryData);
-    
+
     res.status(201).json({
       message: 'Blog category created successfully',
       category
@@ -3580,30 +3566,30 @@ app.put('/api/admin/blog-categories/:id', authenticateAdmin, async (req, res) =>
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
-    
+
     // Generate new slug if name changed
     if (updateData.name) {
       const newSlug = generateSlug(updateData.name);
-      const existingCategory = await BlogCategory.findOne({ 
-        slug: newSlug, 
-        _id: { $ne: id } 
+      const existingCategory = await BlogCategory.findOne({
+        slug: newSlug,
+        _id: { $ne: id }
       });
-      
+
       if (!existingCategory) {
         updateData.slug = newSlug;
       }
     }
-    
+
     const category = await BlogCategory.findByIdAndUpdate(
-      id, 
-      updateData, 
+      id,
+      updateData,
       { new: true }
     );
-    
+
     if (!category) {
       return res.status(404).json({ error: 'Blog category not found' });
     }
-    
+
     res.json({
       message: 'Blog category updated successfully',
       category
@@ -3618,13 +3604,13 @@ app.put('/api/admin/blog-categories/:id', authenticateAdmin, async (req, res) =>
 app.delete('/api/admin/blog-categories/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const category = await BlogCategory.findByIdAndDelete(id);
-    
+
     if (!category) {
       return res.status(404).json({ error: 'Blog category not found' });
     }
-    
+
     res.json({ message: 'Blog category deleted successfully' });
   } catch (error) {
     console.error('Delete blog category error:', error);
@@ -3640,9 +3626,9 @@ app.post('/api/admin/case-studies/upload', authenticateAdmin, upload.single('ima
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-    
+
     const imageUrl = `/uploads/case-studies/${req.file.filename}`;
-    
+
     res.json({
       message: 'Image uploaded successfully',
       imageUrl,
@@ -3660,9 +3646,9 @@ app.post('/api/admin/blogs/upload', authenticateAdmin, upload.single('image'), (
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-    
+
     const imageUrl = `/uploads/blogs/${req.file.filename}`;
-    
+
     res.json({
       message: 'Image uploaded successfully',
       imageUrl,
@@ -3680,9 +3666,9 @@ app.post('/api/admin/case-studies/upload-gallery', authenticateAdmin, upload.arr
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
     }
-    
+
     const imageUrls = req.files.map(file => `/uploads/case-studies/${file.filename}`);
-    
+
     res.json({
       message: 'Images uploaded successfully',
       imageUrls,
@@ -3702,13 +3688,13 @@ app.get('/api/chat/test', async (req, res) => {
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: 'Gemini API key not configured' });
     }
-    
+
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
+
     const result = await model.generateContent('Say hello');
     const text = result.response.text();
-    
+
     res.json({ status: 'OK', response: text });
   } catch (error) {
     console.error('Gemini test error:', error.message);
@@ -3720,29 +3706,29 @@ app.get('/api/chat/test', async (req, res) => {
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
-    
+
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
-    
+
     if (!process.env.GEMINI_API_KEY) {
       console.error('Gemini API key not configured');
       return res.status(500).json({ error: 'AI service temporarily unavailable' });
     }
-    
+
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
-    
+
     const context = `You are an AI assistant for Liquidata, a modern data solutions company. Provide helpful, professional responses about our services: data analytics, AI insights, custom software development (web/mobile apps), and project consulting. Pricing ranges from ₹25,000 to ₹50,00,000+. For specific pricing, direct users to our calculator or contact form.\n\nUser: ${message}`;
-    
+
     const result = await model.generateContent(context);
     const text = result.response.text();
-    
+
     res.json({ response: text });
   } catch (error) {
     console.error('Gemini chat error:', error.message);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Sorry, I\'m having trouble right now. Please try again in a moment.',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
