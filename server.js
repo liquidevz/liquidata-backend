@@ -25,7 +25,17 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-app.use(cors());
+// CORS Configuration
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production'
+    ? (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || 'https://liquidata.dev').split(',')
+    : '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -86,9 +96,9 @@ const swaggerSpec = {
   servers: [
     {
       url: process.env.NODE_ENV === 'production'
-        ? 'https://liquidata-backend.onrender.com'
+        ? 'https://api.liquidata.dev'
         : `http://localhost:${PORT}`,
-      description: process.env.NODE_ENV === 'production' ? 'Production Server' : 'Development Server'
+      description: process.env.NODE_ENV === 'production' ? 'Production Server (api.liquidata.dev)' : 'Development Server'
     }
   ],
   components: {
