@@ -3107,6 +3107,18 @@ app.get('/api/case-studies', async (req, res) => {
   }
 });
 
+// Get single case study by ID (Admin)
+app.get('/api/admin/case-studies/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const caseStudy = await CaseStudy.findById(id).populate('author', 'username email');
+    if (!caseStudy) return res.status(404).json({ error: 'Case study not found' });
+    res.json(caseStudy);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch case study' });
+  }
+});
+
 // Get single case study by slug (Public)
 app.get('/api/case-studies/:slug', async (req, res) => {
   try {
@@ -3375,6 +3387,18 @@ app.get('/api/blogs', async (req, res) => {
   } catch (error) {
     console.error('Get blogs error:', error);
     res.status(500).json({ error: 'Failed to fetch blogs' });
+  }
+});
+
+// Get single blog by ID (Admin)
+app.get('/api/admin/blogs/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const blog = await Blog.findById(id).populate('author', 'username email');
+    if (!blog) return res.status(404).json({ error: 'Blog not found' });
+    res.json(blog);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch blog' });
   }
 });
 

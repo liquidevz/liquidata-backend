@@ -68,6 +68,13 @@ module.exports = {
     }
   },
   '/api/admin/case-studies/{id}': {
+    get: {
+      summary: 'Get case study by ID',
+      tags: ['Case Studies - Admin'],
+      security: [{ bearerAuth: [] }],
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+      responses: { 200: { description: 'Case study details' }, 404: { description: 'Not found' } }
+    },
     put: {
       summary: 'Update case study',
       tags: ['Case Studies - Admin'],
@@ -142,6 +149,13 @@ module.exports = {
     }
   },
   '/api/admin/blogs/{id}': {
+    get: {
+      summary: 'Get blog by ID',
+      tags: ['Blogs - Admin'],
+      security: [{ bearerAuth: [] }],
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+      responses: { 200: { description: 'Blog details' }, 404: { description: 'Not found' } }
+    },
     put: {
       summary: 'Update blog',
       tags: ['Blogs - Admin'],
