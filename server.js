@@ -3711,63 +3711,63 @@ app.delete('/api/admin/blog-categories/:id', authenticateAdmin, async (req, res)
 // ============= FILE UPLOAD APIs =============
 
 // Upload image for case studies (Admin only)
-app.post('/api/admin/case-studies/upload', authenticateAdmin, upload.single('image'), (req, res) => {
-  try {
+app.post('/api/admin/case-studies/upload', authenticateAdmin, (req, res) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      console.error('Multer error:', err);
+      return res.status(500).json({ error: err.message || 'Upload failed' });
+    }
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-
-    const imageUrl = `/uploads/case-studies/${req.file.filename}`;
-
+    const baseUrl = process.env.API_URL || `${req.protocol}://${req.get('host')}`;
+    const imageUrl = `${baseUrl}/uploads/case-studies/${req.file.filename}`;
     res.json({
       message: 'Image uploaded successfully',
       imageUrl,
       filename: req.file.filename
     });
-  } catch (error) {
-    console.error('Upload case study image error:', error);
-    res.status(500).json({ error: 'Failed to upload image' });
-  }
+  });
 });
 
 // Upload image for blogs (Admin only)
-app.post('/api/admin/blogs/upload', authenticateAdmin, upload.single('image'), (req, res) => {
-  try {
+app.post('/api/admin/blogs/upload', authenticateAdmin, (req, res) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      console.error('Multer error:', err);
+      return res.status(500).json({ error: err.message || 'Upload failed' });
+    }
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-
-    const imageUrl = `/uploads/blogs/${req.file.filename}`;
-
+    const baseUrl = process.env.API_URL || `${req.protocol}://${req.get('host')}`;
+    const imageUrl = `${baseUrl}/uploads/blogs/${req.file.filename}`;
     res.json({
       message: 'Image uploaded successfully',
       imageUrl,
       filename: req.file.filename
     });
-  } catch (error) {
-    console.error('Upload blog image error:', error);
-    res.status(500).json({ error: 'Failed to upload image' });
-  }
+  });
 });
 
 // Upload multiple images for case study gallery (Admin only)
-app.post('/api/admin/case-studies/upload-gallery', authenticateAdmin, upload.array('images', 10), (req, res) => {
-  try {
+app.post('/api/admin/case-studies/upload-gallery', authenticateAdmin, (req, res) => {
+  upload.array('images', 10)(req, res, (err) => {
+    if (err) {
+      console.error('Multer error:', err);
+      return res.status(500).json({ error: err.message || 'Upload failed' });
+    }
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
     }
-
-    const imageUrls = req.files.map(file => `/uploads/case-studies/${file.filename}`);
-
+    const baseUrl = process.env.API_URL || `${req.protocol}://${req.get('host')}`;
+    const imageUrls = req.files.map(file => `${baseUrl}/uploads/case-studies/${file.filename}`);
     res.json({
       message: 'Images uploaded successfully',
       imageUrls,
       count: req.files.length
     });
-  } catch (error) {
-    console.error('Upload gallery images error:', error);
-    res.status(500).json({ error: 'Failed to upload images' });
-  }
+  });
 });
 
 // ============= GEMINI CHAT API =============
