@@ -68,12 +68,17 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     let uploadPath = 'public/uploads';
 
-    if (req.route.path.includes('case-studies')) {
+    if (req.path.includes('case-studies')) {
       uploadPath = 'public/uploads/case-studies';
-    } else if (req.route.path.includes('blogs')) {
+    } else if (req.path.includes('blogs')) {
       uploadPath = 'public/uploads/blogs';
-    } else if (req.route.path.includes('logos')) {
+    } else if (req.path.includes('logos')) {
       uploadPath = 'public/uploads/logos';
+    }
+
+    // Ensure directory exists
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
     }
 
     cb(null, uploadPath);
