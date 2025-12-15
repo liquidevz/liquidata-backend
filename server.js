@@ -67,20 +67,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
-// Ensure upload directories exist
-const uploadDirs = [
-  'public/uploads',
-  'public/uploads/blogs',
-  'public/uploads/case-studies',
-  'public/uploads/logos'
-];
-
-uploadDirs.forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
-
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
